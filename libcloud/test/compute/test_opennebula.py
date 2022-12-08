@@ -22,21 +22,22 @@ OpenNebula.org test suite.
 
 __docformat__ = "epytext"
 
-import sys
 import unittest
+import sys
 
-import libcloud.compute.drivers.opennebula
-from libcloud.test import MockHttp
 from libcloud.utils.py3 import httplib
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeState
-from libcloud.test.secrets import OPENNEBULA_PARAMS
+
+from libcloud.compute.base import Node, NodeImage, NodeSize, NodeState
+from libcloud.compute.drivers.opennebula import OpenNebulaNodeDriver
+from libcloud.compute.drivers.opennebula import OpenNebulaNetwork
+from libcloud.compute.drivers.opennebula import OpenNebulaNodeSize
+from libcloud.compute.drivers.opennebula import ACTION
+import libcloud.compute.drivers.opennebula
 from libcloud.test.file_fixtures import ComputeFileFixtures
-from libcloud.compute.drivers.opennebula import (
-    ACTION,
-    OpenNebulaNetwork,
-    OpenNebulaNodeSize,
-    OpenNebulaNodeDriver,
-)
+from libcloud.test import MockHttp
+
+from libcloud.test.secrets import OPENNEBULA_PARAMS
+
 
 libcloud.compute.drivers.opennebula.API_HOST = "dummy"
 
@@ -88,7 +89,9 @@ class OpenNebula_1_4_Tests(unittest.TestCase):
             )
         )
 
-        node = self.driver.create_node(name="Compute 5", image=image, size=size, networks=networks)
+        node = self.driver.create_node(
+            name="Compute 5", image=image, size=size, networks=networks
+        )
 
         self.assertEqual(node.id, "5")
         self.assertEqual(node.name, "Compute 5")
@@ -318,7 +321,9 @@ class OpenNebula_2_0_Tests(unittest.TestCase):
         self.assertEqual(node.public_ips[1].size, 1)
         self.assertEqual(node.public_ips[1].extra["mac"], "02:00:c0:a8:01:01")
         self.assertEqual(node.private_ips, [])
-        self.assertTrue(len([s for s in self.driver.list_sizes() if s.id == node.size.id]) == 1)
+        self.assertTrue(
+            len([s for s in self.driver.list_sizes() if s.id == node.size.id]) == 1
+        )
         self.assertEqual(node.image.id, "5")
         self.assertEqual(node.image.name, "Ubuntu 9.04 LAMP")
         self.assertEqual(node.image.extra["type"], "DISK")
@@ -357,7 +362,8 @@ class OpenNebula_2_0_Tests(unittest.TestCase):
         self.assertEqual(node.public_ips[1].extra["mac"], "02:00:c0:a8:01:01")
         self.assertEqual(node.private_ips, [])
         self.assertTrue(
-            len([size for size in self.driver.list_sizes() if size.id == node.size.id]) == 1
+            len([size for size in self.driver.list_sizes() if size.id == node.size.id])
+            == 1
         )
         self.assertEqual(node.size.id, "1")
         self.assertEqual(node.size.name, "small")
@@ -370,7 +376,14 @@ class OpenNebula_2_0_Tests(unittest.TestCase):
         self.assertIsNone(node.size.bandwidth)
         self.assertIsNone(node.size.price)
         self.assertTrue(
-            len([image for image in self.driver.list_images() if image.id == node.image.id]) == 1
+            len(
+                [
+                    image
+                    for image in self.driver.list_images()
+                    if image.id == node.image.id
+                ]
+            )
+            == 1
         )
         self.assertEqual(node.image.id, "5")
         self.assertEqual(node.image.name, "Ubuntu 9.04 LAMP")
@@ -394,7 +407,8 @@ class OpenNebula_2_0_Tests(unittest.TestCase):
         self.assertEqual(node.public_ips[1].extra["mac"], "02:00:c0:a8:01:02")
         self.assertEqual(node.private_ips, [])
         self.assertTrue(
-            len([size for size in self.driver.list_sizes() if size.id == node.size.id]) == 1
+            len([size for size in self.driver.list_sizes() if size.id == node.size.id])
+            == 1
         )
         self.assertEqual(node.size.id, "1")
         self.assertEqual(node.size.name, "small")
@@ -407,7 +421,14 @@ class OpenNebula_2_0_Tests(unittest.TestCase):
         self.assertIsNone(node.size.bandwidth)
         self.assertIsNone(node.size.price)
         self.assertTrue(
-            len([image for image in self.driver.list_images() if image.id == node.image.id]) == 1
+            len(
+                [
+                    image
+                    for image in self.driver.list_images()
+                    if image.id == node.image.id
+                ]
+            )
+            == 1
         )
         self.assertEqual(node.image.id, "15")
         self.assertEqual(node.image.name, "Ubuntu 9.04 LAMP")

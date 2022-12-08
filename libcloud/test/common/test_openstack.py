@@ -15,8 +15,9 @@
 
 import sys
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
+from unittest.mock import Mock
 from libcloud.common.base import LibcloudConnection
 from libcloud.common.openstack import OpenStackBaseConnection
 

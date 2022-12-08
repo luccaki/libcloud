@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import List
+from typing import Dict
 
-from libcloud.common.base import JsonResponse, ConnectionKey
+from libcloud.common.base import ConnectionKey, JsonResponse
+
 
 __all__ = ["API_HOST", "NsOneException", "NsOneResponse", "NsOneConnection"]
 
@@ -28,13 +30,13 @@ class NsOneResponse(JsonResponse):
     objects = []  # type: List[Dict]
 
     def __init__(self, response, connection):
-        super().__init__(response=response, connection=connection)
+        super(NsOneResponse, self).__init__(response=response, connection=connection)
         self.errors, self.objects = self.parse_body_and_errors()
         if not self.success():
             raise NsOneException(code=self.status, message=self.errors.pop()["message"])
 
     def parse_body_and_errors(self):
-        js = super().parse_body()
+        js = super(NsOneResponse, self).parse_body()
         if "message" in js:
             self.errors.append(js)
         else:
@@ -64,7 +66,7 @@ class NsOneException(Exception):
         self.args = (code, message)
 
     def __str__(self):
-        return "{} {}".format(self.code, self.message)
+        return "%s %s" % (self.code, self.message)
 
     def __repr__(self):
-        return "NsOneException {} {}".format(self.code, self.message)
+        return "NsOneException %s %s" % (self.code, self.message)

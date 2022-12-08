@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import sys
+
 from unittest.mock import Mock
 
-from libcloud.test import unittest
 from libcloud.common.base import BaseDriver
+
+from libcloud.test import unittest
 
 
 class BaseDriverTestCase(unittest.TestCase):

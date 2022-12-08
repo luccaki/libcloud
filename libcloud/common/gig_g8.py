@@ -13,14 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
+from libcloud.common.base import ConnectionKey, JsonResponse
 import json
-import time
 import base64
-
 import requests
-
-from libcloud.common.base import JsonResponse, ConnectionKey
+import os
+import time
 
 # normally we only use itsyou.online but you might want to work
 # against staging.itsyou.online for some testing

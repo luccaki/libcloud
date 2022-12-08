@@ -20,6 +20,7 @@ import time
 import hashlib
 
 from libcloud.utils.py3 import b
+
 from libcloud.common.base import ConnectionKey
 from libcloud.common.xmlrpc import XMLRPCResponse, XMLRPCConnection
 
@@ -36,11 +37,11 @@ class GandiException(Exception):
 
     def __str__(self):
         # pylint: disable=unsubscriptable-object
-        return "({}) {}".format(self.args[0], self.args[1])
+        return "(%s) %s" % (self.args[0], self.args[1])
 
     def __repr__(self):
         # pylint: disable=unsubscriptable-object
-        return '<GandiException code {} "{}">'.format(self.args[0], self.args[1])
+        return '<GandiException code %s "%s">' % (self.args[0], self.args[1])
 
 
 class GandiResponse(XMLRPCResponse):
@@ -71,7 +72,7 @@ class GandiConnection(XMLRPCConnection, ConnectionKey):
         # XMLRPCConnection -> Connection and Connection doesn't take key as the
         # first argument so we specify a keyword argument instead.
         # Previously it was GandiConnection -> ConnectionKey so it worked fine.
-        super().__init__(
+        super(GandiConnection, self).__init__(
             key=key,
             secure=secure,
             timeout=timeout,
@@ -83,10 +84,10 @@ class GandiConnection(XMLRPCConnection, ConnectionKey):
 
     def request(self, method, *args):
         args = (self.key,) + args
-        return super().request(method, *args)
+        return super(GandiConnection, self).request(method, *args)
 
 
-class BaseGandiDriver:
+class BaseGandiDriver(object):
     """
     Gandi base driver
 
@@ -96,7 +97,9 @@ class BaseGandiDriver:
     name = "Gandi"
 
     # Specific methods for gandi
-    def _wait_operation(self, id, timeout=DEFAULT_TIMEOUT, check_interval=DEFAULT_INTERVAL):
+    def _wait_operation(
+        self, id, timeout=DEFAULT_TIMEOUT, check_interval=DEFAULT_INTERVAL
+    ):
         """Wait for an operation to succeed"""
 
         for i in range(0, timeout, check_interval):
@@ -117,7 +120,7 @@ class BaseGandiDriver:
         return False
 
 
-class BaseObject:
+class BaseObject(object):
     """Base class for objects not conventional"""
 
     uuid_prefix = ""
@@ -146,7 +149,7 @@ class BaseObject:
         Note, for example, that this example will always produce the
         same UUID!
         """
-        hashstring = "{}:{}:{}".format(self.uuid_prefix, self.id, self.driver.type)
+        hashstring = "%s:%s:%s" % (self.uuid_prefix, self.id, self.driver.type)
         return hashlib.sha1(b(hashstring)).hexdigest()
 
 
@@ -158,7 +161,7 @@ class IPAddress(BaseObject):
     uuid_prefix = "inet:"
 
     def __init__(self, id, state, inet, driver, version=4, extra=None):
-        super().__init__(id, state, driver)
+        super(IPAddress, self).__init__(id, state, driver)
         self.inet = inet
         self.version = version
         self.extra = extra or {}
@@ -179,8 +182,10 @@ class NetworkInterface(BaseObject):
 
     uuid_prefix = "if:"
 
-    def __init__(self, id, state, mac_address, driver, ips=None, node_id=None, extra=None):
-        super().__init__(id, state, driver)
+    def __init__(
+        self, id, state, mac_address, driver, ips=None, node_id=None, extra=None
+    ):
+        super(NetworkInterface, self).__init__(id, state, driver)
         self.mac = mac_address
         self.ips = ips or {}
         self.node_id = node_id
@@ -201,7 +206,7 @@ class Disk(BaseObject):
     """
 
     def __init__(self, id, state, name, driver, size, extra=None):
-        super().__init__(id, state, driver)
+        super(Disk, self).__init__(id, state, driver)
         self.name = name
         self.size = size
         self.extra = extra or {}

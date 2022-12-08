@@ -18,9 +18,10 @@ Gandi Live driver base classes
 
 import json
 
-from libcloud.utils.py3 import httplib
-from libcloud.common.base import JsonResponse, ConnectionKey
+from libcloud.common.base import ConnectionKey, JsonResponse
 from libcloud.common.types import ProviderError
+
+from libcloud.utils.py3 import httplib
 
 __all__ = [
     "API_HOST",
@@ -206,10 +207,10 @@ class GandiLiveResponse(JsonResponse):
         :rtype:   ``str``
         """
         if not json_error and "cause" in body:
-            message = "{}: {}".format(body["cause"], body["message"])
+            message = "%s: %s" % (body["cause"], body["message"])
             if "errors" in body:
                 err = body["errors"][0]
-                message = "{} ({} in {}: {})".format(
+                message = "%s (%s in %s: %s)" % (
                     message,
                     err.get("location"),
                     err.get("name"),
@@ -242,7 +243,7 @@ class GandiLiveConnection(ConnectionKey):
         return json.dumps(data)
 
 
-class BaseGandiLiveDriver:
+class BaseGandiLiveDriver(object):
     """
     Gandi Live base driver
     """

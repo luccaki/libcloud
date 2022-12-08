@@ -16,7 +16,7 @@
 __all__ = ["Provider", "ContainerState"]
 
 
-class Type:
+class Type(object):
     @classmethod
     def tostring(cls, value):
         """Return the string representation of the state object attribute
@@ -36,7 +36,7 @@ class Type:
         return getattr(cls, value.upper(), None)
 
 
-class Provider:
+class Provider(object):
     """
     Defines for each of the supported providers
 

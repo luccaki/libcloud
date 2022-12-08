@@ -14,14 +14,16 @@
 # limitations under the License.
 import sys
 import unittest
+from libcloud.utils.py3 import httplib
+
+from libcloud.compute.drivers.ecp import ECPNodeDriver
+from libcloud.compute.types import NodeState
 
 from libcloud.test import MockHttp
-from libcloud.utils.py3 import httplib
 from libcloud.test.compute import TestCaseMixin
-from libcloud.test.secrets import ECP_PARAMS
-from libcloud.compute.types import NodeState
 from libcloud.test.file_fixtures import ComputeFileFixtures
-from libcloud.compute.drivers.ecp import ECPNodeDriver
+
+from libcloud.test.secrets import ECP_PARAMS
 
 
 class ECPTests(unittest.TestCase, TestCaseMixin):

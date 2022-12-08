@@ -15,15 +15,16 @@
 
 __all__ = ["ApplicationLBDriver"]
 
-from libcloud.utils.xml import findall, findtext
-from libcloud.common.aws import AWSGenericResponse, SignedAWSConnection
-from libcloud.loadbalancer.base import Driver, Member, LoadBalancer
+from libcloud.utils.xml import findtext, findall
 from libcloud.loadbalancer.types import State
+from libcloud.loadbalancer.base import Driver, LoadBalancer, Member
+from libcloud.common.aws import AWSGenericResponse, SignedAWSConnection
+
 
 VERSION = "2015-12-01"
 HOST = "elasticloadbalancing.%s.amazonaws.com"
 ROOT = "/%s/" % (VERSION)
-NS = "http://elasticloadbalancing.amazonaws.com/doc/{}/".format(VERSION)
+NS = "http://elasticloadbalancing.amazonaws.com/doc/%s/" % (VERSION,)
 
 
 class ALBResponse(AWSGenericResponse):
@@ -43,7 +44,7 @@ class ALBConnection(SignedAWSConnection):
     service_name = "elasticloadbalancing"
 
 
-class ALBTargetGroup:
+class ALBTargetGroup(object):
     """
     AWS ALB target group class
     http://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html
@@ -117,7 +118,7 @@ class ALBTargetGroup:
         self._members_ids = [mb.id for mb in val] if val else []
 
 
-class ALBListener:
+class ALBListener(object):
     """
     AWS ALB listener class
     http://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html
@@ -170,7 +171,7 @@ class ALBListener:
         self._rules = val
 
 
-class ALBRule:
+class ALBRule(object):
     """
     AWS ALB listener rule class
     http://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-listeners.html#listener-rules
@@ -201,7 +202,9 @@ class ALBRule:
     @property
     def target_group(self):
         if not self._target_group and self._target_group_arn:
-            self._target_group = self._driver.ex_get_target_group(self._target_group_arn)
+            self._target_group = self._driver.ex_get_target_group(
+                self._target_group_arn
+            )
         return self._target_group
 
     @target_group.setter
@@ -231,7 +234,9 @@ class ApplicationLBDriver(Driver):
         self.token = token
         self.region = region
         self.region_name = region
-        super().__init__(access_id, secret, token=token, host=HOST % region, region=region)
+        super(ApplicationLBDriver, self).__init__(
+            access_id, secret, token=token, host=HOST % region, region=region
+        )
 
     def list_protocols(self):
         """
@@ -778,7 +783,10 @@ class ApplicationLBDriver(Driver):
 
     def _to_listeners(self, data):
         xpath = "DescribeListenersResult/Listeners/member"
-        return [self._to_listener(el) for el in findall(element=data, xpath=xpath, namespace=NS)]
+        return [
+            self._to_listener(el)
+            for el in findall(element=data, xpath=xpath, namespace=NS)
+        ]
 
     def _to_listener(self, el):
         listener = ALBListener(
@@ -787,14 +795,18 @@ class ApplicationLBDriver(Driver):
             port=int(findtext(element=el, xpath="Port", namespace=NS)),
             balancer=None,
             driver=self.connection.driver,
-            action=findtext(element=el, xpath="DefaultActions/member/Type", namespace=NS),
+            action=findtext(
+                element=el, xpath="DefaultActions/member/Type", namespace=NS
+            ),
             ssl_policy=findtext(element=el, xpath="SslPolicy", namespace=NS),
             ssl_certificate=findtext(
                 element=el, xpath="Certificates/member/CertificateArn", namespace=NS
             ),
         )
 
-        listener._balancer_arn = findtext(element=el, xpath="LoadBalancerArn", namespace=NS)
+        listener._balancer_arn = findtext(
+            element=el, xpath="LoadBalancerArn", namespace=NS
+        )
 
         return listener
 
@@ -823,7 +835,10 @@ class ApplicationLBDriver(Driver):
 
     def _to_balancers(self, data):
         xpath = "DescribeLoadBalancersResult/LoadBalancers/member"
-        return [self._to_balancer(el) for el in findall(element=data, xpath=xpath, namespace=NS)]
+        return [
+            self._to_balancer(el)
+            for el in findall(element=data, xpath=xpath, namespace=NS)
+        ]
 
     def _to_tags(self, data):
         """
@@ -849,13 +864,17 @@ class ApplicationLBDriver(Driver):
         for cond_member in cond_members:
             field = findtext(element=cond_member, xpath="Field", namespace=NS)
             conditions[field] = []
-            value_members = findall(element=cond_member, xpath="Values/member", namespace=NS)
+            value_members = findall(
+                element=cond_member, xpath="Values/member", namespace=NS
+            )
             for value_member in value_members:
                 conditions[field].append(value_member.text)
 
         rule = ALBRule(
             rule_id=findtext(element=el, xpath="RuleArn", namespace=NS),
-            is_default=__to_bool__(findtext(element=el, xpath="IsDefault", namespace=NS)),
+            is_default=__to_bool__(
+                findtext(element=el, xpath="IsDefault", namespace=NS)
+            ),
             # CreateRule API method accepts only int for priority, however
             # DescribeRules method returns 'default' string for default
             # listener rule. So leaving it as string.
@@ -873,12 +892,15 @@ class ApplicationLBDriver(Driver):
 
     def _to_rules(self, data):
         xpath = "DescribeRulesResult/Rules/member"
-        return [self._to_rule(el) for el in findall(element=data, xpath=xpath, namespace=NS)]
+        return [
+            self._to_rule(el) for el in findall(element=data, xpath=xpath, namespace=NS)
+        ]
 
     def _to_target_groups(self, data):
         xpath = "DescribeTargetGroupsResult/TargetGroups/member"
         return [
-            self._to_target_group(el) for el in findall(element=data, xpath=xpath, namespace=NS)
+            self._to_target_group(el)
+            for el in findall(element=data, xpath=xpath, namespace=NS)
         ]
 
     def _to_target_group(self, el):
@@ -893,9 +915,15 @@ class ApplicationLBDriver(Driver):
             health_check_timeout=int(
                 findtext(element=el, xpath="HealthCheckTimeoutSeconds", namespace=NS)
             ),
-            health_check_port=findtext(element=el, xpath="HealthCheckPort", namespace=NS),
-            health_check_path=findtext(element=el, xpath="HealthCheckPath", namespace=NS),
-            health_check_proto=findtext(element=el, xpath="HealthCheckProtocol", namespace=NS),
+            health_check_port=findtext(
+                element=el, xpath="HealthCheckPort", namespace=NS
+            ),
+            health_check_path=findtext(
+                element=el, xpath="HealthCheckPath", namespace=NS
+            ),
+            health_check_proto=findtext(
+                element=el, xpath="HealthCheckProtocol", namespace=NS
+            ),
             health_check_interval=int(
                 findtext(element=el, xpath="HealthCheckIntervalSeconds", namespace=NS)
             ),
@@ -905,7 +933,9 @@ class ApplicationLBDriver(Driver):
             unhealthy_threshold=int(
                 findtext(element=el, xpath="UnhealthyThresholdCount", namespace=NS)
             ),
-            health_check_matcher=findtext(element=el, xpath="Matcher/HttpCode", namespace=NS),
+            health_check_matcher=findtext(
+                element=el, xpath="Matcher/HttpCode", namespace=NS
+            ),
         )
 
         lbs = findall(element=el, xpath="LoadBalancerArns/member", namespace=NS)
@@ -926,7 +956,9 @@ class ApplicationLBDriver(Driver):
             ip=None,
             port=findtext(element=el, xpath="Target/Port", namespace=NS),
             balancer=None,
-            extra={"health": findtext(element=el, xpath="TargetHealth/State", namespace=NS)},
+            extra={
+                "health": findtext(element=el, xpath="TargetHealth/State", namespace=NS)
+            },
         )
         return member
 
@@ -1002,7 +1034,7 @@ class ApplicationLBDriver(Driver):
         return self._to_tags(data)
 
     def _ex_connection_class_kwargs(self):
-        pdriver = super()
+        pdriver = super(ApplicationLBDriver, self)
         kwargs = pdriver._ex_connection_class_kwargs()
         if hasattr(self, "token") and self.token is not None:
             kwargs["token"] = self.token

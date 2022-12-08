@@ -22,10 +22,12 @@ try:
 except Exception:
     import json  # type: ignore
 
-from libcloud.utils.py3 import httplib
-from libcloud.common.base import BaseDriver, JsonResponse, PollingConnection, ConnectionUserAndKey
+from libcloud.common.base import BaseDriver, PollingConnection
+from libcloud.common.base import ConnectionUserAndKey
+from libcloud.common.base import JsonResponse
 from libcloud.common.types import InvalidCredsError
 from libcloud.compute.types import NodeState
+from libcloud.utils.py3 import httplib
 
 NODE_STATE_MAP = {
     "ACTIVE": NodeState.RUNNING,
@@ -83,11 +85,13 @@ class GridscaleConnection(ConnectionUserAndKey, PollingConnection):
     def async_request(self, *poargs, **kwargs):
         self.async_request_counter = 0
         self.request_method = "_poll_request_initial"
-        return super().async_request(*poargs, **kwargs)
+        return super(GridscaleConnection, self).async_request(*poargs, **kwargs)
 
     def _poll_request_initial(self, **kwargs):
         if self.async_request_counter == 0:
-            self.poll_response_initial = super().request(**kwargs)
+            self.poll_response_initial = super(GridscaleConnection, self).request(
+                **kwargs
+            )
             r = self.poll_response_initial
             self.async_request_counter += 1
         else:
@@ -116,7 +120,7 @@ class GridscaleBaseDriver(BaseDriver):
     connectionCls = GridscaleConnection
 
     def __init__(self, user_id, key, **kwargs):
-        super().__init__(user_id, key, **kwargs)
+        super(GridscaleBaseDriver, self).__init__(user_id, key, **kwargs)
 
     def _sync_request(self, data=None, endpoint=None, method="GET"):
         raw_result = self.connection.request(endpoint, data=data, method=method)

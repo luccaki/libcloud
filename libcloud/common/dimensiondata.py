@@ -15,15 +15,17 @@
 """
 Dimension Data Common Components
 """
-from time import sleep
 from base64 import b64encode
+from time import sleep
 
 # TODO: use disutils.version when Travis CI fixed the pylint issue with version
 # from distutils.version import LooseVersion
-from libcloud.utils.py3 import b, httplib, basestring
-from libcloud.utils.xml import findtext
-from libcloud.common.base import RawResponse, XmlResponse, ConnectionUserAndKey
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import b
+from libcloud.common.base import ConnectionUserAndKey, XmlResponse, RawResponse
 from libcloud.compute.base import Node
+from libcloud.utils.py3 import basestring
+from libcloud.utils.xml import findtext
 from libcloud.compute.types import LibcloudError, InvalidCredsError
 
 # Roadmap / TODO:
@@ -297,9 +299,8 @@ def dd_object_to_id(obj, obj_type, id_value="id"):
         return obj
     else:
         raise TypeError(
-            "Invalid type {} looking for basestring or {}".format(
-                type(obj).__name__, obj_type.__name__
-            )
+            "Invalid type %s looking for basestring or %s"
+            % (type(obj).__name__, obj_type.__name__)
         )
 
 
@@ -309,7 +310,7 @@ def LooseVersion(version):
     return float(version)
 
 
-class NetworkDomainServicePlan:
+class NetworkDomainServicePlan(object):
     ESSENTIALS = "ESSENTIALS"
     ADVANCED = "ADVANCED"
 
@@ -336,7 +337,9 @@ class DimensionDataResponse(XmlResponse):
                 message = findtext(body, message[0], message[1])
                 if message is not None:
                     break
-            raise DimensionDataAPIException(code=code, msg=message, driver=self.connection.driver)
+            raise DimensionDataAPIException(
+                code=code, msg=message, driver=self.connection.driver
+            )
         if self.status is not httplib.OK:
             raise DimensionDataAPIException(
                 code=self.status, msg=body, driver=self.connection.driver
@@ -352,10 +355,10 @@ class DimensionDataAPIException(LibcloudError):
         self.driver = driver
 
     def __str__(self):
-        return "{}: {}".format(self.code, self.msg)
+        return "%s: %s" % (self.code, self.msg)
 
     def __repr__(self):
-        return "<DimensionDataAPIException: code='{}', msg='{}'>".format(
+        return "<DimensionDataAPIException: code='%s', msg='%s'>" % (
             self.code,
             self.msg,
         )
@@ -398,7 +401,7 @@ class DimensionDataConnection(ConnectionUserAndKey):
         api_version=None,
         **conn_kwargs,
     ):
-        super().__init__(
+        super(DimensionDataConnection, self).__init__(
             user_id=user_id,
             key=key,
             secure=secure,
@@ -437,35 +440,37 @@ class DimensionDataConnection(ConnectionUserAndKey):
 
     def add_default_headers(self, headers):
         headers["Authorization"] = "Basic %s" % b64encode(
-            b("{}:{}".format(self.user_id, self.key))
+            b("%s:%s" % (self.user_id, self.key))
         ).decode("utf-8")
         headers["Content-Type"] = "application/xml"
         return headers
 
     def request_api_1(self, action, params=None, data="", headers=None, method="GET"):
-        action = "{}/{}/{}".format(self.api_path_version_1, self.api_version_1, action)
+        action = "%s/%s/%s" % (self.api_path_version_1, self.api_version_1, action)
 
-        return super().request(
+        return super(DimensionDataConnection, self).request(
             action=action, params=params, data=data, method=method, headers=headers
         )
 
-    def request_api_2(self, path, action, params=None, data="", headers=None, method="GET"):
-        action = "{}/{}/{}/{}".format(
+    def request_api_2(
+        self, path, action, params=None, data="", headers=None, method="GET"
+    ):
+        action = "%s/%s/%s/%s" % (
             self.api_path_version_2,
             self.active_api_version,
             path,
             action,
         )
 
-        return super().request(
+        return super(DimensionDataConnection, self).request(
             action=action, params=params, data=data, method=method, headers=headers
         )
 
     def raw_request_with_orgId_api_1(
         self, action, params=None, data="", headers=None, method="GET"
     ):
-        action = "{}/{}".format(self.get_resource_path_api_1(), action)
-        return super().request(
+        action = "%s/%s" % (self.get_resource_path_api_1(), action)
+        return super(DimensionDataConnection, self).request(
             action=action,
             params=params,
             data=data,
@@ -474,17 +479,21 @@ class DimensionDataConnection(ConnectionUserAndKey):
             raw=True,
         )
 
-    def request_with_orgId_api_1(self, action, params=None, data="", headers=None, method="GET"):
-        action = "{}/{}".format(self.get_resource_path_api_1(), action)
+    def request_with_orgId_api_1(
+        self, action, params=None, data="", headers=None, method="GET"
+    ):
+        action = "%s/%s" % (self.get_resource_path_api_1(), action)
 
-        return super().request(
+        return super(DimensionDataConnection, self).request(
             action=action, params=params, data=data, method=method, headers=headers
         )
 
-    def request_with_orgId_api_2(self, action, params=None, data="", headers=None, method="GET"):
-        action = "{}/{}".format(self.get_resource_path_api_2(), action)
+    def request_with_orgId_api_2(
+        self, action, params=None, data="", headers=None, method="GET"
+    ):
+        action = "%s/%s" % (self.get_resource_path_api_2(), action)
 
-        return super().request(
+        return super(DimensionDataConnection, self).request(
             action=action, params=params, data=data, method=method, headers=headers
         )
 
@@ -520,7 +529,9 @@ class DimensionDataConnection(ConnectionUserAndKey):
             params = {}
         params["pageSize"] = page_size
 
-        resp = self.request_with_orgId_api_2(action, params, data, headers, method).object
+        resp = self.request_with_orgId_api_2(
+            action, params, data, headers, method
+        ).object
         yield resp
         if len(resp) <= 0:
             return
@@ -531,7 +542,9 @@ class DimensionDataConnection(ConnectionUserAndKey):
 
         while int(pcount) >= int(psize):
             params["pageNumber"] = int(pnumber) + 1
-            resp = self.request_with_orgId_api_2(action, params, data, headers, method).object
+            resp = self.request_with_orgId_api_2(
+                action, params, data, headers, method
+            ).object
             pcount = resp.get("pageCount")  # pylint: disable=no-member
             psize = resp.get("pageSize")  # pylint: disable=no-member
             pnumber = resp.get("pageNumber")  # pylint: disable=no-member
@@ -543,7 +556,7 @@ class DimensionDataConnection(ConnectionUserAndKey):
         resources that require a full path instead of just an ID, such as
         networks, and customer snapshots.
         """
-        return "{}/{}/{}".format(
+        return "%s/%s/%s" % (
             self.api_path_version_1,
             self.api_version_1,
             self._get_orgId(),
@@ -555,7 +568,7 @@ class DimensionDataConnection(ConnectionUserAndKey):
         resources that require a full path instead of just an ID, such as
         networks, and customer snapshots.
         """
-        return "{}/{}/{}".format(
+        return "%s/%s/%s" % (
             self.api_path_version_2,
             self.active_api_version,
             self._get_orgId(),
@@ -636,7 +649,7 @@ class DimensionDataConnection(ConnectionUserAndKey):
         )
 
 
-class DimensionDataAccountDetails:
+class DimensionDataAccountDetails(object):
     """
     Dimension Data account class details
     """
@@ -649,7 +662,7 @@ class DimensionDataAccountDetails:
         self.email = email
 
 
-class DimensionDataStatus:
+class DimensionDataStatus(object):
     """
     DimensionData API pending operation status class
         action, request_time, user_name, number_of_steps, update_time,
@@ -697,7 +710,7 @@ class DimensionDataStatus:
         )
 
 
-class DimensionDataNetwork:
+class DimensionDataNetwork(object):
     """
     DimensionData network with location.
     """
@@ -725,7 +738,7 @@ class DimensionDataNetwork:
         )
 
 
-class DimensionDataNetworkDomain:
+class DimensionDataNetworkDomain(object):
     """
     DimensionData network domain with location.
     """
@@ -752,7 +765,7 @@ class DimensionDataNetworkDomain:
         )
 
 
-class DimensionDataPublicIpBlock:
+class DimensionDataPublicIpBlock(object):
     """
     DimensionData Public IP Block with location.
     """
@@ -767,11 +780,12 @@ class DimensionDataPublicIpBlock:
 
     def __repr__(self):
         return (
-            "<DimensionDataNetworkDomain: id=%s, base_ip=%s, " "size=%s, location=%s, status=%s>"
+            "<DimensionDataNetworkDomain: id=%s, base_ip=%s, "
+            "size=%s, location=%s, status=%s>"
         ) % (self.id, self.base_ip, self.size, self.location, self.status)
 
 
-class DimensionDataServerCpuSpecification:
+class DimensionDataServerCpuSpecification(object):
     """
     A class that represents the specification of the CPU(s) for a
     node
@@ -803,7 +817,7 @@ class DimensionDataServerCpuSpecification:
         ) % (self.cpu_count, self.cores_per_socket, self.performance)
 
 
-class DimensionDataServerDisk:
+class DimensionDataServerDisk(object):
     """
     A class that represents the disk on a server
     """
@@ -840,7 +854,7 @@ class DimensionDataServerDisk:
         )
 
 
-class DimensionDataServerVMWareTools:
+class DimensionDataServerVMWareTools(object):
     """
     A class that represents the VMWareTools for a node
     """
@@ -865,11 +879,13 @@ class DimensionDataServerVMWareTools:
 
     def __repr__(self):
         return (
-            "<DimensionDataServerVMWareTools " "status=%s, version_status=%s, " "api_version=%s>"
+            "<DimensionDataServerVMWareTools "
+            "status=%s, version_status=%s, "
+            "api_version=%s>"
         ) % (self.status, self.version_status, self.api_version)
 
 
-class DimensionDataFirewallRule:
+class DimensionDataFirewallRule(object):
     """
     DimensionData Firewall Rule for a network domain
     """
@@ -921,7 +937,7 @@ class DimensionDataFirewallRule:
         )
 
 
-class DimensionDataFirewallAddress:
+class DimensionDataFirewallAddress(object):
     """
     The source or destination model in a firewall rule
     """
@@ -962,7 +978,7 @@ class DimensionDataFirewallAddress:
         )
 
 
-class DimensionDataNatRule:
+class DimensionDataNatRule(object):
     """
     An IP NAT rule in a network domain
     """
@@ -978,7 +994,7 @@ class DimensionDataNatRule:
         return ("<DimensionDataNatRule: id=%s, status=%s>") % (self.id, self.status)
 
 
-class DimensionDataAntiAffinityRule:
+class DimensionDataAntiAffinityRule(object):
     """
     Anti-Affinity rule for DimensionData
 
@@ -1003,7 +1019,7 @@ class DimensionDataAntiAffinityRule:
         return ("<DimensionDataAntiAffinityRule: id=%s>") % (self.id)
 
 
-class DimensionDataVlan:
+class DimensionDataVlan(object):
     """
     DimensionData VLAN.
     """
@@ -1081,11 +1097,12 @@ class DimensionDataVlan:
 
     def __repr__(self):
         return (
-            "<DimensionDataVlan: id=%s, name=%s, " "description=%s, location=%s, status=%s>"
+            "<DimensionDataVlan: id=%s, name=%s, "
+            "description=%s, location=%s, status=%s>"
         ) % (self.id, self.name, self.description, self.location, self.status)
 
 
-class DimensionDataPool:
+class DimensionDataPool(object):
     """
     DimensionData VIP Pool.
     """
@@ -1146,7 +1163,7 @@ class DimensionDataPool:
         )
 
 
-class DimensionDataPoolMember:
+class DimensionDataPoolMember(object):
     """
     DimensionData VIP Pool Member.
     """
@@ -1182,11 +1199,12 @@ class DimensionDataPoolMember:
 
     def __repr__(self):
         return (
-            "<DimensionDataPoolMember: id=%s, name=%s, " "ip=%s, status=%s, port=%s, node_id=%s>"
+            "<DimensionDataPoolMember: id=%s, name=%s, "
+            "ip=%s, status=%s, port=%s, node_id=%s>"
         ) % (self.id, self.name, self.ip, self.status, self.port, self.node_id)
 
 
-class DimensionDataVIPNode:
+class DimensionDataVIPNode(object):
     def __init__(
         self,
         id,
@@ -1233,7 +1251,7 @@ class DimensionDataVIPNode:
         )
 
 
-class DimensionDataVirtualListener:
+class DimensionDataVirtualListener(object):
     """
     DimensionData Virtual Listener.
     """
@@ -1260,15 +1278,12 @@ class DimensionDataVirtualListener:
         self.ip = ip
 
     def __repr__(self):
-        return ("<DimensionDataVirtualListener: id=%s, name=%s, " "status=%s, ip=%s>") % (
-            self.id,
-            self.name,
-            self.status,
-            self.ip,
-        )
+        return (
+            "<DimensionDataVirtualListener: id=%s, name=%s, " "status=%s, ip=%s>"
+        ) % (self.id, self.name, self.status, self.ip)
 
 
-class DimensionDataDefaultHealthMonitor:
+class DimensionDataDefaultHealthMonitor(object):
     """
     A default health monitor for a VIP (node, pool or listener)
     """
@@ -1301,7 +1316,7 @@ class DimensionDataDefaultHealthMonitor:
         )
 
 
-class DimensionDataPersistenceProfile:
+class DimensionDataPersistenceProfile(object):
     """
     Each Persistence Profile declares the combination of Virtual Listener
     type and protocol with which it is
@@ -1338,7 +1353,7 @@ class DimensionDataPersistenceProfile:
         )
 
 
-class DimensionDataDefaultiRule:
+class DimensionDataDefaultiRule(object):
     """
     A default iRule for a network domain, can be applied to a listener
     """
@@ -1365,7 +1380,7 @@ class DimensionDataDefaultiRule:
         return ("<DimensionDataDefaultiRule: id=%s, name=%s>") % (self.id, self.name)
 
 
-class DimensionDataVirtualListenerCompatibility:
+class DimensionDataVirtualListenerCompatibility(object):
     """
     A compatibility preference for a persistence profile or iRule
     specifies which virtual listener types this profile or iRule can be
@@ -1377,13 +1392,12 @@ class DimensionDataVirtualListenerCompatibility:
         self.protocol = protocol
 
     def __repr__(self):
-        return ("<DimensionDataVirtualListenerCompatibility: " "type=%s, protocol=%s>") % (
-            self.type,
-            self.protocol,
-        )
+        return (
+            "<DimensionDataVirtualListenerCompatibility: " "type=%s, protocol=%s>"
+        ) % (self.type, self.protocol)
 
 
-class DimensionDataBackupDetails:
+class DimensionDataBackupDetails(object):
     """
     Dimension Data Backup Details represents information about
     a targets backups configuration
@@ -1415,7 +1429,7 @@ class DimensionDataBackupDetails:
         return ("<DimensionDataBackupDetails: id=%s>") % (self.asset_id)
 
 
-class DimensionDataBackupClient:
+class DimensionDataBackupClient(object):
     """
     An object that represents a backup client
     """
@@ -1476,7 +1490,7 @@ class DimensionDataBackupClient:
         return ("<DimensionDataBackupClient: id=%s>") % (self.id)
 
 
-class DimensionDataBackupClientAlert:
+class DimensionDataBackupClientAlert(object):
     """
     An alert for a backup client
     """
@@ -1499,7 +1513,7 @@ class DimensionDataBackupClientAlert:
         return ("<DimensionDataBackupClientAlert: trigger=%s>") % (self.trigger)
 
 
-class DimensionDataBackupClientRunningJob:
+class DimensionDataBackupClientRunningJob(object):
     """
     A running job for a given backup client
     """
@@ -1525,7 +1539,7 @@ class DimensionDataBackupClientRunningJob:
         return ("<DimensionDataBackupClientRunningJob: id=%s>") % (self.id)
 
 
-class DimensionDataBackupClientType:
+class DimensionDataBackupClientType(object):
     """
     A client type object for backups
     """
@@ -1551,7 +1565,7 @@ class DimensionDataBackupClientType:
         return ("<DimensionDataBackupClientType: type=%s>") % (self.type)
 
 
-class DimensionDataBackupStoragePolicy:
+class DimensionDataBackupStoragePolicy(object):
     """
     A representation of a storage policy
     """
@@ -1577,7 +1591,7 @@ class DimensionDataBackupStoragePolicy:
         return ("<DimensionDataBackupStoragePolicy: name=%s>") % (self.name)
 
 
-class DimensionDataBackupSchedulePolicy:
+class DimensionDataBackupSchedulePolicy(object):
     """
     A representation of a schedule policy
     """
@@ -1599,7 +1613,7 @@ class DimensionDataBackupSchedulePolicy:
         return ("<DimensionDataBackupSchedulePolicy: name=%s>") % (self.name)
 
 
-class DimensionDataTag:
+class DimensionDataTag(object):
     """
     A representation of a Tag in Dimension Data
     A Tag first must have a Tag Key, then an asset is tag with
@@ -1646,7 +1660,7 @@ class DimensionDataTag:
         )
 
 
-class DimensionDataTagKey:
+class DimensionDataTagKey(object):
     """
     A representation of a Tag Key in Dimension Data
     A tag key is required to tag an asset
@@ -1682,7 +1696,7 @@ class DimensionDataTagKey:
         return ("<DimensionDataTagKey: name=%s>") % (self.name)
 
 
-class DimensionDataIpAddressList:
+class DimensionDataIpAddressList(object):
     """
     DimensionData IP Address list
     """
@@ -1753,7 +1767,7 @@ class DimensionDataIpAddressList:
         )
 
 
-class DimensionDataChildIpAddressList:
+class DimensionDataChildIpAddressList(object):
     """
     DimensionData Child IP Address list
     """
@@ -1773,13 +1787,13 @@ class DimensionDataChildIpAddressList:
         self.name = name
 
     def __repr__(self):
-        return "<DimensionDataChildIpAddressList: id={}, name={}>".format(
+        return "<DimensionDataChildIpAddressList: id=%s, name=%s>" % (
             self.id,
             self.name,
         )
 
 
-class DimensionDataIpAddress:
+class DimensionDataIpAddress(object):
     """
     A representation of IP Address in Dimension Data
     """
@@ -1802,14 +1816,14 @@ class DimensionDataIpAddress:
         self.prefix_size = prefix_size
 
     def __repr__(self):
-        return "<DimensionDataIpAddress: begin={}, end={}, prefix_size={}>".format(
+        return "<DimensionDataIpAddress: begin=%s, end=%s, prefix_size=%s>" % (
             self.begin,
             self.end,
             self.prefix_size,
         )
 
 
-class DimensionDataPortList:
+class DimensionDataPortList(object):
     """
     DimensionData Port list
     """
@@ -1873,7 +1887,7 @@ class DimensionDataPortList:
         )
 
 
-class DimensionDataChildPortList:
+class DimensionDataChildPortList(object):
     """
     DimensionData Child Port list
     """
@@ -1893,10 +1907,10 @@ class DimensionDataChildPortList:
         self.name = name
 
     def __repr__(self):
-        return "<DimensionDataChildPortList: id={}, name={}>".format(self.id, self.name)
+        return "<DimensionDataChildPortList: id=%s, name=%s>" % (self.id, self.name)
 
 
-class DimensionDataPort:
+class DimensionDataPort(object):
     """
     A representation of Port in Dimension Data
     """
@@ -1915,10 +1929,10 @@ class DimensionDataPort:
         self.end = end
 
     def __repr__(self):
-        return "<DimensionDataPort: begin={}, end={}>".format(self.begin, self.end)
+        return "<DimensionDataPort: begin=%s, end=%s>" % (self.begin, self.end)
 
 
-class DimensionDataNic:
+class DimensionDataNic(object):
     """
     A representation of Network Adapter in Dimension Data
     """
@@ -1941,8 +1955,8 @@ class DimensionDataNic:
         self.network_adapter_name = network_adapter_name
 
     def __repr__(self):
-        return "<DimensionDataNic: private_ip_v4=%s, vlan=%s," "network_adapter_name=%s>" % (
-            self.private_ip_v4,
-            self.vlan,
-            self.network_adapter_name,
+        return (
+            "<DimensionDataNic: private_ip_v4=%s, vlan=%s,"
+            "network_adapter_name=%s>"
+            % (self.private_ip_v4, self.vlan, self.network_adapter_name)
         )

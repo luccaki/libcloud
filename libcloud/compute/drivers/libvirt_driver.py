@@ -12,20 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import with_statement
 
-import os
 import re
+import os
 import time
 import platform
-import mimetypes
 import subprocess
+import mimetypes
+
 from os.path import join as pjoin
 from collections import defaultdict
 
-from libcloud.utils.py3 import ET, ensure_string
-from libcloud.compute.base import Node, NodeState, NodeDriver
+from libcloud.utils.py3 import ET
+from libcloud.compute.base import NodeDriver, Node
+from libcloud.compute.base import NodeState
 from libcloud.compute.types import Provider
 from libcloud.utils.networking import is_public_subnet
+from libcloud.utils.py3 import ensure_string
 
 try:
     import libvirt
@@ -239,7 +243,7 @@ class LibvirtNodeDriver(NodeDriver):
         else:
             extension = ".png"
 
-        name = "screenshot-{}{}".format(int(time.time()), extension)
+        name = "screenshot-%s%s" % (int(time.time()), extension)
         file_path = pjoin(directory, name)
 
         with open(file_path, "wb") as fp:
@@ -348,13 +352,17 @@ class LibvirtNodeDriver(NodeDriver):
         arp_table = {}
         try:
             cmd = ["arp", "-an"]
-            child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            child = subprocess.Popen(
+                cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
             stdout, _ = child.communicate()
             arp_table = self._parse_ip_table_arp(arp_output=stdout)
         except OSError as e:
             if e.errno == 2:
                 cmd = ["ip", "neigh"]
-                child = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                child = subprocess.Popen(
+                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
                 stdout, _ = child.communicate()
                 arp_table = self._parse_ip_table_neigh(ip_output=stdout)
 

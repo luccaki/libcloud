@@ -14,10 +14,6 @@
     "provisioningState": "Succeeded",
     "diskState": "Attached"
   },
-  "sku": {
-    "name": "Standard_LRS",
-    "tier": "Standard"
-  },
   "type": "Microsoft.Compute/disks",
   "location": "eastus",
   "tags": {},

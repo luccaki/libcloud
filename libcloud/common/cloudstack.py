@@ -13,14 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
-import hmac
 import base64
 import hashlib
+import copy
+import hmac
 
-from libcloud.utils.py3 import b, httplib, urlquote, urlencode
-from libcloud.common.base import JsonResponse, PollingConnection, ConnectionUserAndKey
-from libcloud.common.types import ProviderError, MalformedResponseError
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import urlencode
+from libcloud.utils.py3 import urlquote
+from libcloud.utils.py3 import b
+
+from libcloud.common.types import ProviderError
+from libcloud.common.base import ConnectionUserAndKey, PollingConnection
+from libcloud.common.base import JsonResponse
+from libcloud.common.types import MalformedResponseError
 from libcloud.compute.types import InvalidCredsError
 
 
@@ -41,7 +47,9 @@ class CloudStackResponse(JsonResponse):
         if not value:
             value = "WARNING: error message text sent by provider was empty."
 
-        error = ProviderError(value=value, http_code=self.status, driver=self.connection.driver)
+        error = ProviderError(
+            value=value, http_code=self.status, driver=self.connection.driver
+        )
         raise error
 
 
@@ -74,7 +82,7 @@ class CloudStackConnection(ConnectionUserAndKey, PollingConnection):
         for pair in signature:
             key = urlquote(str(pair[0]), safe="[]")
             value = urlquote(str(pair[1]), safe="[]*")
-            item = "{}={}".format(key, value)
+            item = "%s=%s" % (key, value)
             pairs.append(item)
 
         signature = "&".join(pairs)
@@ -111,7 +119,7 @@ class CloudStackConnection(ConnectionUserAndKey, PollingConnection):
 
         # Command is specified as part of GET call
         context["command"] = command
-        result = super().async_request(
+        result = super(CloudStackConnection, self).async_request(
             action=action,
             params=params,
             data=data,
@@ -182,7 +190,9 @@ class CloudStackConnection(ConnectionUserAndKey, PollingConnection):
             and "revokesecuritygroupingressresponse" not in result.object
         ):
             command = command
-        elif command == "restorevirtualmachine" and "restorevmresponse" in result.object:
+        elif (
+            command == "restorevirtualmachine" and "restorevmresponse" in result.object
+        ):
             command = "restorevmresponse"
         else:
             command = command + "response"
@@ -197,7 +207,7 @@ class CloudStackConnection(ConnectionUserAndKey, PollingConnection):
         return result
 
 
-class CloudStackDriverMixIn:
+class CloudStackDriverMixIn(object):
     host = None
     path = None
 
@@ -205,7 +215,7 @@ class CloudStackDriverMixIn:
 
     def __init__(self, key, secret=None, secure=True, host=None, port=None):
         host = host or self.host
-        super().__init__(key, secret, secure, host, port)
+        super(CloudStackDriverMixIn, self).__init__(key, secret, secure, host, port)
 
     def _sync_request(
         self, command, action=None, params=None, data=None, headers=None, method="GET"

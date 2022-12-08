@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -45,12 +46,12 @@ API_ENDPOINTS_2_0 = {
     "sjc": {
         "name": "San Jose, CA",
         "country": "United States",
-        "host": "sjc.alpha3cloud.com",
+        "host": "sjc.cloudsigma.com",
     },
     "wdc": {
         "name": "Washington, DC",
         "country": "United States",
-        "host": "wdc.alpha3cloud.com",
+        "host": "wdc.cloudsigma.com",
     },
     "hnl": {
         "name": "Honolulu, HI",

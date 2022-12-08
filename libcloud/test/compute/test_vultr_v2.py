@@ -16,11 +16,12 @@
 import sys
 import unittest
 
-from libcloud.test import MockHttp
 from libcloud.utils.py3 import httplib
+from libcloud.compute.drivers.vultr import VultrNodeDriver
+from libcloud.compute.drivers.vultr import VultrNodeDriverV2
 from libcloud.common.vultr import VultrException
+from libcloud.test import MockHttp
 from libcloud.test.file_fixtures import ComputeFileFixtures
-from libcloud.compute.drivers.vultr import VultrNodeDriver, VultrNodeDriverV2
 
 
 class VultrTestsV2(unittest.TestCase):
@@ -108,7 +109,9 @@ class VultrTestsV2(unittest.TestCase):
         image = self.driver.list_images()[0]
         size = self.driver.list_sizes()[0]
         location = self.driver.list_locations()[0]
-        node = self.driver.create_node(name=name, image=image, size=size, location=location)
+        node = self.driver.create_node(
+            name=name, image=image, size=size, location=location
+        )
         self.assertEqual(node.id, "123")
         self.assertEqual(node.name, "test123")
         self.assertEqual(node.image, "446")
@@ -314,7 +317,9 @@ class VultrTestsV2(unittest.TestCase):
         image = self.driver.list_images()[0]
         location = self.driver.list_locations()[0]
         size = self.driver.list_sizes()[-1]
-        node = self.driver.create_node(name="test1", image=image, location=location, size=size)
+        node = self.driver.create_node(
+            name="test1", image=image, location=location, size=size
+        )
         self.assertEqual(node.name, "test1")
         self.assertEqual(node.id, "234")
         self.assertTrue(node.extra["is_bare_metal"])

@@ -16,7 +16,7 @@
 __all__ = ["Provider", "BackupTargetType", "BackupTargetJobStatusType"]
 
 
-class Provider:
+class Provider(object):
     """
     Defines for each of the supported providers
 
@@ -30,7 +30,7 @@ class Provider:
     GCE = "gce"
 
 
-class BackupTargetType:
+class BackupTargetType(object):
     """
     Backup Target type.
     """
@@ -54,7 +54,7 @@ class BackupTargetType:
     """ Denotes a block storage volume """
 
 
-class BackupTargetJobStatusType:
+class BackupTargetJobStatusType(object):
     """
     The status of a backup target job
     """

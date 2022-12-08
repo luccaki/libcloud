@@ -19,10 +19,12 @@ A driver for cloudscale.ch.
 import json
 
 from libcloud.utils.py3 import httplib
-from libcloud.common.base import JsonResponse, ConnectionKey
-from libcloud.common.types import InvalidCredsError
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeDriver
+
+from libcloud.common.base import ConnectionKey, JsonResponse
 from libcloud.compute.types import Provider, NodeState
+from libcloud.common.types import InvalidCredsError
+from libcloud.compute.base import NodeDriver
+from libcloud.compute.base import Node, NodeImage, NodeSize
 
 
 class CloudscaleResponse(JsonResponse):
@@ -86,7 +88,7 @@ class CloudscaleNodeDriver(NodeDriver):
     )
 
     def __init__(self, key, **kwargs):
-        super().__init__(key, **kwargs)
+        super(CloudscaleNodeDriver, self).__init__(key, **kwargs)
 
     def list_nodes(self):
         """
@@ -141,7 +143,9 @@ class CloudscaleNodeDriver(NodeDriver):
             image=image.id,
             flavor=size.id,
         )
-        result = self.connection.request("/v1/servers", data=json.dumps(attr), method="POST")
+        result = self.connection.request(
+            "/v1/servers", data=json.dumps(attr), method="POST"
+        )
         return self._to_node(result.object)
 
     def reboot_node(self, node):

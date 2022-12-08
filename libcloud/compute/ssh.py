@@ -17,18 +17,12 @@
 Wraps multiple ways to communicate over SSH.
 """
 
-import os
-import re
-import time
-import logging
-import warnings
-import subprocess
-from typing import List, Type, Tuple, Union, Optional, cast
-from os.path import join as pjoin
-from os.path import split as psplit
-
-from libcloud.utils.py3 import StringIO, b
-from libcloud.utils.logging import ExtraLogFormatter
+from typing import Type
+from typing import Optional
+from typing import Tuple
+from typing import List
+from typing import Union
+from typing import cast
 
 have_paramiko = False
 
@@ -37,7 +31,7 @@ try:
 
     have_paramiko = True
 
-    PARAMIKO_VERSION_TUPLE = tuple(int(x) for x in paramiko.__version__.split("."))
+    PARAMIKO_VERSION_TUPLE = tuple([int(x) for x in paramiko.__version__.split(".")])
 except ImportError:
     PARAMIKO_VERSION_TUPLE = ()
 
@@ -45,6 +39,19 @@ except ImportError:
 # warning on Python 2.6.
 # Ref: https://bugs.launchpad.net/paramiko/+bug/392973
 
+import os
+import re
+import time
+import subprocess
+import logging
+import warnings
+
+from os.path import split as psplit
+from os.path import join as pjoin
+
+from libcloud.utils.logging import ExtraLogFormatter
+from libcloud.utils.py3 import StringIO
+from libcloud.utils.py3 import b
 
 __all__ = [
     "BaseSSHClient",
@@ -92,10 +99,10 @@ class SSHCommandTimeoutError(Exception):
         self.stderr = stderr
 
         self.message = "Command didn't finish in %s seconds" % (timeout)
-        super().__init__(self.message)
+        super(SSHCommandTimeoutError, self).__init__(self.message)
 
     def __repr__(self):
-        return '<SSHCommandTimeoutError: cmd="{}",timeout={})>'.format(
+        return '<SSHCommandTimeoutError: cmd="%s",timeout=%s)>' % (
             self.cmd,
             self.timeout,
         )
@@ -104,7 +111,7 @@ class SSHCommandTimeoutError(Exception):
         return self.__repr__()
 
 
-class BaseSSHClient:
+class BaseSSHClient(object):
     """
     Base class representing a connection over SSH/SCP to a remote node.
     """
@@ -301,9 +308,11 @@ class ParamikoSSHClient(BaseSSHClient):
         :type use_compression: ``bool``
         """
         if key_files and key_material:
-            raise ValueError("key_files and key_material arguments are " "mutually exclusive")
+            raise ValueError(
+                ("key_files and key_material arguments are " "mutually exclusive")
+            )
 
-        super().__init__(
+        super(ParamikoSSHClient, self).__init__(
             hostname=hostname,
             port=port,
             username=username,
@@ -341,7 +350,9 @@ class ParamikoSSHClient(BaseSSHClient):
             conninfo["key_filename"] = self.key_files
 
         if self.key_material:
-            conninfo["pkey"] = self._get_pkey_object(key=self.key_material, password=self.password)
+            conninfo["pkey"] = self._get_pkey_object(
+                key=self.key_material, password=self.password
+            )
 
         if not self.password and not (self.key_files or self.key_material):
             conninfo["allow_agent"] = True
@@ -359,7 +370,7 @@ class ParamikoSSHClient(BaseSSHClient):
             and not isinstance(self.key_files, (list, tuple))
             and os.path.isfile(self.key_files)
         ):
-            with open(self.key_files) as fp:
+            with open(self.key_files, "r") as fp:
                 key_material = fp.read()
 
             try:
@@ -407,7 +418,9 @@ class ParamikoSSHClient(BaseSSHClient):
             ):
                 self.logger.warn(SHA2_PUBKEY_NOT_SUPPORTED_AUTH_ERROR_MSG)
 
-                conninfo["disabled_algorithms"] = {"pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]}
+                conninfo["disabled_algorithms"] = {
+                    "pubkeys": ["rsa-sha2-256", "rsa-sha2-512"]
+                }
                 self.client.connect(**conninfo)
             else:
                 raise e
@@ -433,7 +446,7 @@ class ParamikoSSHClient(BaseSSHClient):
             if part != "":
                 try:
                     sftp.mkdir(part)
-                except OSError:
+                except IOError:
                     # so, there doesn't seem to be a way to
                     # catch EEXIST consistently *sigh*
                     pass
@@ -477,7 +490,7 @@ class ParamikoSSHClient(BaseSSHClient):
             if part != "":
                 try:
                     sftp.mkdir(part)
-                except OSError:
+                except IOError:
                     # so, there doesn't seem to be a way to
                     # catch EEXIST consistently *sigh*
                     pass
@@ -663,7 +676,7 @@ class ParamikoSSHClient(BaseSSHClient):
         ]
 
         paramiko_version = getattr(paramiko, "__version__", "0.0.0")
-        paramiko_version = tuple(int(c) for c in paramiko_version.split("."))
+        paramiko_version = tuple([int(c) for c in paramiko_version.split(".")])
 
         if paramiko_version >= (2, 2, 0):
             # Ed25519 is only supported in paramiko >= 2.2.0
@@ -693,8 +706,9 @@ class ParamikoSSHClient(BaseSSHClient):
                 raise e
             except (paramiko.ssh_exception.SSHException, AssertionError) as e:
                 if "private key file checkints do not match" in str(e).lower():
-                    msg = "Invalid password provided for encrypted key. " "Original error: %s" % (
-                        str(e)
+                    msg = (
+                        "Invalid password provided for encrypted key. "
+                        "Original error: %s" % (str(e))
                     )
                     # Indicates invalid password for password protected keys
                     raise paramiko.ssh_exception.SSHException(msg)
@@ -808,7 +822,7 @@ class ShellOutSSHClient(BaseSSHClient):
         key_files=None,  # type: Optional[str]
         timeout=None,  # type: Optional[float]
     ):
-        super().__init__(
+        super(ShellOutSSHClient, self).__init__(
             hostname=hostname,
             port=port,
             username=username,
@@ -820,7 +834,9 @@ class ShellOutSSHClient(BaseSSHClient):
         if self.password:
             raise ValueError("ShellOutSSHClient only supports key auth")
 
-        child = subprocess.Popen(["ssh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        child = subprocess.Popen(
+            ["ssh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         child.communicate()
 
         if child.returncode == 127:
@@ -846,7 +862,7 @@ class ShellOutSSHClient(BaseSSHClient):
         else:
             raise ValueError("Invalid mode: " + mode)
 
-        cmd = ['echo "{}" {} {}'.format(contents, redirect, path)]
+        cmd = ['echo "%s" %s %s' % (contents, redirect, path)]
         self._run_remote_shell_command(cmd)
         return path
 
@@ -873,7 +889,7 @@ class ShellOutSSHClient(BaseSSHClient):
         if self.timeout:
             cmd += ["-oConnectTimeout=%s" % (self.timeout)]
 
-        cmd += ["{}@{}".format(self.username, self.hostname)]
+        cmd += ["%s@%s" % (self.username, self.hostname)]
 
         return cmd
 
@@ -893,7 +909,9 @@ class ShellOutSSHClient(BaseSSHClient):
 
         self.logger.debug('Executing command: "%s"' % (" ".join(full_cmd)))
 
-        child = subprocess.Popen(full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        child = subprocess.Popen(
+            full_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         stdout, stderr = child.communicate()
 
         stdout_str = cast(str, stdout)

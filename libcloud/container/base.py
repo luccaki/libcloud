@@ -13,11 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import with_statement
 
-from typing import List, Optional
+from typing import Optional
+from typing import List
 
-from libcloud.common.base import BaseDriver, ConnectionUserAndKey
+from libcloud.common.base import ConnectionUserAndKey, BaseDriver
 from libcloud.container.types import ContainerState
+
 
 __all__ = [
     "Container",
@@ -28,7 +31,7 @@ __all__ = [
 ]
 
 
-class Container:
+class Container(object):
     """
     Container.
     """
@@ -100,7 +103,7 @@ class Container:
         )
 
 
-class ContainerImage:
+class ContainerImage(object):
     """
     Container Image.
     """
@@ -147,14 +150,14 @@ class ContainerImage:
         )
 
     def __repr__(self):
-        return "<ContainerImage: id={}, name={}, path={} ...>".format(
+        return "<ContainerImage: id=%s, name=%s, path=%s ...>" % (
             self.id,
             self.name,
             self.path,
         )
 
 
-class ContainerCluster:
+class ContainerCluster(object):
     """
     A cluster group for containers
     """
@@ -193,14 +196,14 @@ class ContainerCluster:
         return self.driver.destroy_cluster(cluster=self)
 
     def __repr__(self):
-        return "<ContainerCluster: id={}, name={}, provider={} ...>".format(
+        return "<ContainerCluster: id=%s, name=%s, provider=%s ...>" % (
             self.id,
             self.name,
             self.driver.name,
         )
 
 
-class ClusterLocation:
+class ClusterLocation(object):
     """
     A physical location where clusters can be.
 
@@ -280,7 +283,9 @@ class ContainerDriver(BaseDriver):
 
         :return: ``None``
         """
-        super().__init__(key=key, secret=secret, secure=secure, host=host, port=port, **kwargs)
+        super(ContainerDriver, self).__init__(
+            key=key, secret=secret, secure=secure, host=host, port=port, **kwargs
+        )
 
     def install_image(self, path):
         # type: (str) -> ContainerImage

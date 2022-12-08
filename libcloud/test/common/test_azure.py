@@ -16,8 +16,8 @@
 import sys
 import unittest
 
-from libcloud.test import LibcloudTestCase
 from libcloud.common.azure import AzureConnection
+from libcloud.test import LibcloudTestCase
 
 
 class AzureConnectionTestCase(LibcloudTestCase):

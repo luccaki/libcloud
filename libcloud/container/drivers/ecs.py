@@ -18,10 +18,15 @@ try:
 except ImportError:
     import json
 
-from libcloud.common.aws import AWSJsonResponse, SignedAWSConnection
-from libcloud.container.base import Container, ContainerImage, ContainerDriver, ContainerCluster
+from libcloud.container.base import (
+    ContainerDriver,
+    Container,
+    ContainerCluster,
+    ContainerImage,
+)
 from libcloud.container.types import ContainerState
 from libcloud.container.utils.docker import RegistryClient
+from libcloud.common.aws import SignedAWSConnection, AWSJsonResponse
 
 __all__ = ["ElasticContainerDriver"]
 
@@ -59,7 +64,7 @@ class ElasticContainerDriver(ContainerDriver):
     status_map = {"RUNNING": ContainerState.RUNNING}
 
     def __init__(self, access_id, secret, region):
-        super().__init__(access_id, secret)
+        super(ElasticContainerDriver, self).__init__(access_id, secret)
         self.region = region
         self.region_name = region
         self.connection.host = ECS_HOST % (region)
@@ -245,7 +250,9 @@ class ElasticContainerDriver(ContainerDriver):
             headers=self._get_headers("RegisterTaskDefinition"),
         ).object
         if start:
-            return self.ex_start_task(response["taskDefinition"]["taskDefinitionArn"])[0]
+            return self.ex_start_task(response["taskDefinition"]["taskDefinitionArn"])[
+                0
+            ]
         else:
             return Container(
                 id=None,
@@ -253,7 +260,9 @@ class ElasticContainerDriver(ContainerDriver):
                 image=image,
                 state=ContainerState.RUNNING,
                 ip_addresses=[],
-                extra={"taskDefinitionArn": response["taskDefinition"]["taskDefinitionArn"]},
+                extra={
+                    "taskDefinitionArn": response["taskDefinition"]["taskDefinitionArn"]
+                },
                 driver=self.connection.driver,
             )
 
@@ -534,7 +543,7 @@ class ElasticContainerDriver(ContainerDriver):
         Get the default headers for a request to the ECS API
         """
         return {
-            "x-amz-target": "{}.{}".format(ECS_TARGET_BASE, action),
+            "x-amz-target": "%s.%s" % (ECS_TARGET_BASE, action),
             "Content-Type": "application/x-amz-json-1.1",
         }
 
@@ -543,7 +552,7 @@ class ElasticContainerDriver(ContainerDriver):
         Get the default headers for a request to the ECR API
         """
         return {
-            "x-amz-target": "{}.{}".format(ECR_TARGET_BASE, action),
+            "x-amz-target": "%s.%s" % (ECR_TARGET_BASE, action),
             "Content-Type": "application/x-amz-json-1.1",
         }
 
@@ -593,7 +602,7 @@ class ElasticContainerDriver(ContainerDriver):
         return images
 
     def _to_image(self, data, host, repository_name):
-        path = "{}/{}:{}".format(host, repository_name, data["imageTag"])
+        path = "%s/%s:%s" % (host, repository_name, data["imageTag"])
         return ContainerImage(
             id=None,
             name=path,

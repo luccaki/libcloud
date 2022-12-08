@@ -15,7 +15,8 @@
 
 
 from libcloud.container.providers import Provider
-from libcloud.container.drivers.docker import DockerConnection, DockerContainerDriver
+
+from libcloud.container.drivers.docker import DockerContainerDriver, DockerConnection
 
 
 class JoyentContainerDriver(DockerContainerDriver):
@@ -45,7 +46,7 @@ class JoyentContainerDriver(DockerContainerDriver):
         cert_file=None,
     ):
 
-        super().__init__(
+        super(JoyentContainerDriver, self).__init__(
             key=key,
             secret=secret,
             secure=secure,
@@ -71,7 +72,8 @@ class JoyentContainerDriver(DockerContainerDriver):
             # libcloud will handle them through LibcloudHTTPSConnection
             if not (key_file and cert_file):
                 raise Exception(
-                    "Needs both private key file and " "certificate file for tls authentication"
+                    "Needs both private key file and "
+                    "certificate file for tls authentication"
                 )
             self.connection.key_file = key_file
             self.connection.cert_file = cert_file

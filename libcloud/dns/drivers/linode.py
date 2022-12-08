@@ -17,25 +17,26 @@ __all__ = ["LinodeDNSDriver"]
 
 from datetime import datetime
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import Provider, RecordType, ZoneDoesNotExistError, RecordDoesNotExistError
-from libcloud.utils.py3 import httplib
-from libcloud.utils.misc import get_new_obj, merge_valid_keys
-from libcloud.common.linode import (
-    API_ROOT,
-    DEFAULT_API_VERSION,
-    LinodeResponse,
-    LinodeException,
-    LinodeConnection,
-    LinodeResponseV4,
-    LinodeExceptionV4,
-    LinodeConnectionV4,
-)
-
 try:
     import simplejson as json
 except ImportError:
     import json
+
+from libcloud.utils.py3 import httplib
+from libcloud.utils.misc import merge_valid_keys, get_new_obj
+from libcloud.common.linode import (
+    API_ROOT,
+    DEFAULT_API_VERSION,
+    LinodeException,
+    LinodeConnection,
+    LinodeResponse,
+    LinodeExceptionV4,
+    LinodeConnectionV4,
+    LinodeResponseV4,
+)
+from libcloud.dns.types import Provider, RecordType
+from libcloud.dns.types import ZoneDoesNotExistError, RecordDoesNotExistError
+from libcloud.dns.base import DNSDriver, Zone, Record
 
 
 VALID_ZONE_EXTRA_PARAMS = [
@@ -97,12 +98,12 @@ class LinodeDNSDriver(DNSDriver):
                 raise NotImplementedError(
                     "No Linode driver found for API version: %s" % (api_version)
                 )
-        return super().__new__(cls)
+        return super(LinodeDNSDriver, cls).__new__(cls)
 
 
 class LinodeDNSResponse(LinodeResponse):
     def _make_excp(self, error):
-        result = super()._make_excp(error)
+        result = super(LinodeDNSResponse, self)._make_excp(error)
         if isinstance(result, LinodeException) and result.code == 5:
             context = self.connection.context
 
@@ -187,7 +188,9 @@ class LinodeDNSDriverV3(LinodeDNSDriver):
         if ttl:
             params["TTL_sec"] = ttl
 
-        merged = merge_valid_keys(params=params, valid_keys=VALID_ZONE_EXTRA_PARAMS, extra=extra)
+        merged = merge_valid_keys(
+            params=params, valid_keys=VALID_ZONE_EXTRA_PARAMS, extra=extra
+        )
         data = self.connection.request(API_ROOT, params=params).objects[0]
         zone = Zone(
             id=data["DomainID"],
@@ -216,7 +219,9 @@ class LinodeDNSDriverV3(LinodeDNSDriver):
         if ttl:
             params["TTL_sec"] = ttl
 
-        merged = merge_valid_keys(params=params, valid_keys=VALID_ZONE_EXTRA_PARAMS, extra=extra)
+        merged = merge_valid_keys(
+            params=params, valid_keys=VALID_ZONE_EXTRA_PARAMS, extra=extra
+        )
         self.connection.request(API_ROOT, params=params).objects[0]
         updated_zone = get_new_obj(
             obj=zone,
@@ -238,7 +243,9 @@ class LinodeDNSDriverV3(LinodeDNSDriver):
             "Target": data,
             "Type": self.RECORD_TYPE_MAP[type],
         }
-        merged = merge_valid_keys(params=params, valid_keys=VALID_RECORD_EXTRA_PARAMS, extra=extra)
+        merged = merge_valid_keys(
+            params=params, valid_keys=VALID_RECORD_EXTRA_PARAMS, extra=extra
+        )
 
         result = self.connection.request(API_ROOT, params=params).objects[0]
         record = Record(
@@ -274,7 +281,9 @@ class LinodeDNSDriverV3(LinodeDNSDriver):
         if type is not None:
             params["Type"] = self.RECORD_TYPE_MAP[type]
 
-        merged = merge_valid_keys(params=params, valid_keys=VALID_RECORD_EXTRA_PARAMS, extra=extra)
+        merged = merge_valid_keys(
+            params=params, valid_keys=VALID_RECORD_EXTRA_PARAMS, extra=extra
+        )
 
         self.connection.request(API_ROOT, params=params).objects[0]
         updated_record = get_new_obj(
@@ -444,7 +453,7 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
         :rtype: :class:`Record`
         """
         data = self.connection.request(
-            "/v4/domains/{}/records/{}".format(zone_id, record_id)
+            "/v4/domains/%s/records/%s" % (zone_id, record_id)
         ).object
 
         return self._to_record(data, self.get_zone(zone_id))
@@ -477,8 +486,12 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
         if ttl is not None:
             attr["ttl_sec"] = ttl
 
-        merge_valid_keys(params=attr, valid_keys=VALID_ZONE_EXTRA_PARAMS_V4, extra=extra)
-        data = self.connection.request("/v4/domains", data=json.dumps(attr), method="POST").object
+        merge_valid_keys(
+            params=attr, valid_keys=VALID_ZONE_EXTRA_PARAMS_V4, extra=extra
+        )
+        data = self.connection.request(
+            "/v4/domains", data=json.dumps(attr), method="POST"
+        ).object
 
         return self._to_zone(data)
 
@@ -515,7 +528,9 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
             "target": data,
         }
 
-        merge_valid_keys(params=attr, valid_keys=VALID_RECORD_EXTRA_PARAMS_V4, extra=extra)
+        merge_valid_keys(
+            params=attr, valid_keys=VALID_RECORD_EXTRA_PARAMS_V4, extra=extra
+        )
         data = self.connection.request(
             "/v4/domains/%s/records" % zone.id, data=json.dumps(attr), method="POST"
         ).object
@@ -556,7 +571,9 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
         if ttl is not None:
             attr["ttl_sec"] = ttl
 
-        merge_valid_keys(params=attr, valid_keys=VALID_ZONE_EXTRA_PARAMS_V4, extra=extra)
+        merge_valid_keys(
+            params=attr, valid_keys=VALID_ZONE_EXTRA_PARAMS_V4, extra=extra
+        )
 
         data = self.connection.request(
             "/v4/domains/%s" % zone.id, data=json.dumps(attr), method="PUT"
@@ -602,10 +619,12 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
         if data is not None:
             attr["target"] = data
 
-        merge_valid_keys(params=attr, valid_keys=VALID_RECORD_EXTRA_PARAMS_V4, extra=extra)
+        merge_valid_keys(
+            params=attr, valid_keys=VALID_RECORD_EXTRA_PARAMS_V4, extra=extra
+        )
 
         data = self.connection.request(
-            "/v4/domains/{}/records/{}".format(zone.id, record.id),
+            "/v4/domains/%s/records/%s" % (zone.id, record.id),
             data=json.dumps(attr),
             method="PUT",
         ).object
@@ -644,7 +663,7 @@ class LinodeDNSDriverV4(LinodeDNSDriver):
         zone = record.zone
 
         response = self.connection.request(
-            "/v4/domains/{}/records/{}".format(zone.id, record.id), method="DELETE"
+            "/v4/domains/%s/records/%s" % (zone.id, record.id), method="DELETE"
         )
         return response.status == httplib.OK
 

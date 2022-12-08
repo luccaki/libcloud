@@ -19,14 +19,16 @@ Tests for Google Container Engine Driver
 import sys
 import unittest
 
-from libcloud.test import MockHttp
 from libcloud.utils.py3 import httplib
-from libcloud.test.secrets import GKE_PARAMS, GKE_KEYWORD_PARAMS
+from libcloud.container.drivers.gke import GKEContainerDriver, API_VERSION
 from libcloud.common.google import GoogleBaseAuthConnection
+from libcloud.test.common.test_google import GoogleAuthMockHttp, GoogleTestCase
+
+from libcloud.test import MockHttp
 from libcloud.test.container import TestCaseMixin
 from libcloud.test.file_fixtures import ContainerFileFixtures
-from libcloud.container.drivers.gke import API_VERSION, GKEContainerDriver
-from libcloud.test.common.test_google import GoogleTestCase, GoogleAuthMockHttp
+
+from libcloud.test.secrets import GKE_PARAMS, GKE_KEYWORD_PARAMS
 
 
 class GKEContainerDriverTestCase(GoogleTestCase, TestCaseMixin):
@@ -73,7 +75,9 @@ class GKEMockHttp(MockHttp):
         # '/project' path instead
         if not path:
             path = "/project"
-        method_name = super()._get_method_name(type, use_param, qs, path)
+        method_name = super(GKEMockHttp, self)._get_method_name(
+            type, use_param, qs, path
+        )
         return method_name
 
     def _zones_us_central1_a_serverconfig(self, method, url, body, headers):

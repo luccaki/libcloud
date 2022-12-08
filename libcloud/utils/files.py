@@ -16,7 +16,8 @@
 import os
 import mimetypes
 
-from libcloud.utils.py3 import b, next
+from libcloud.utils.py3 import next
+from libcloud.utils.py3 import b
 
 CHUNK_SIZE = 8096
 

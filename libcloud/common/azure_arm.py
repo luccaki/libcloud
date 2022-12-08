@@ -19,10 +19,12 @@ except ImportError:
     import json  # type: ignore
 
 import time
+from libcloud.utils.py3 import urlparse
 
+from libcloud.common.base import ConnectionUserAndKey, JsonResponse, RawResponse
+from libcloud.common.base import BaseDriver
 from libcloud.http import LibcloudConnection
-from libcloud.utils.py3 import urlparse, urlencode, basestring
-from libcloud.common.base import BaseDriver, RawResponse, JsonResponse, ConnectionUserAndKey
+from libcloud.utils.py3 import basestring, urlencode
 
 
 class AzureBaseDriver(BaseDriver):
@@ -36,7 +38,7 @@ class AzureJsonResponse(JsonResponse):
         if isinstance(b, basestring):
             return b
         elif isinstance(b, dict) and "error" in b:
-            return "[{}] {}".format(b["error"].get("code"), b["error"].get("message"))
+            return "[%s] %s" % (b["error"].get("code"), b["error"].get("message"))
         else:
             return str(b)
 
@@ -152,7 +154,7 @@ class AzureResourceManagementConnection(ConnectionUserAndKey):
         cloud_environment=None,
         **kwargs,
     ):
-        super().__init__(key, secret, **kwargs)
+        super(AzureResourceManagementConnection, self).__init__(key, secret, **kwargs)
         if not cloud_environment:
             cloud_environment = "default"
         if isinstance(cloud_environment, basestring):
@@ -165,7 +167,9 @@ class AzureResourceManagementConnection(ConnectionUserAndKey):
                 "'activeDirectoryResourceId', "
                 "'storageEndpointSuffix'" % ("', '".join(publicEnvironments.keys()))
             )
-        self.host = urlparse.urlparse(cloud_environment["resourceManagerEndpointUrl"]).hostname
+        self.host = urlparse.urlparse(
+            cloud_environment["resourceManagerEndpointUrl"]
+        ).hostname
         self.login_host = urlparse.urlparse(
             cloud_environment["activeDirectoryEndpointUrl"]
         ).hostname
@@ -206,15 +210,17 @@ class AzureResourceManagementConnection(ConnectionUserAndKey):
 
     def connect(self, **kwargs):
         self.get_token_from_credentials()
-        return super().connect(**kwargs)
+        return super(AzureResourceManagementConnection, self).connect(**kwargs)
 
-    def request(self, action, params=None, data=None, headers=None, method="GET", raw=False):
+    def request(
+        self, action, params=None, data=None, headers=None, method="GET", raw=False
+    ):
 
         # Log in again if the token has expired or is going to expire soon
         # (next 5 minutes).
         if (time.time() + 300) >= int(self.expires_on):
             self.get_token_from_credentials()
 
-        return super().request(
+        return super(AzureResourceManagementConnection, self).request(
             action, params=params, data=data, headers=headers, method=method, raw=raw
         )

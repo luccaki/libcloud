@@ -18,10 +18,9 @@ skalicloud Driver
 """
 
 from libcloud.compute.types import Provider
-from libcloud.compute.drivers.elasticstack import (
-    ElasticStackBaseConnection,
-    ElasticStackBaseNodeDriver,
-)
+from libcloud.compute.drivers.elasticstack import ElasticStackBaseNodeDriver
+from libcloud.compute.drivers.elasticstack import ElasticStackBaseConnection
+
 
 # API end-points
 API_ENDPOINTS = {

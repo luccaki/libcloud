@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os.path
-
 import pytest
 
 
@@ -29,12 +28,15 @@ def pytest_configure(config):
         print("Missing " + secrets_current)
         print("Maybe you forgot to copy it from -dist:")
         print("cp libcloud/test/secrets.py-dist libcloud/test/secrets.py")
-        pytest.exit("Secrets file missing")
+        pytest.exit(reason="Secrets file missing")
 
     mtime_current = os.path.getmtime(secrets_current)
     mtime_dist = os.path.getmtime(secrets_dist)
 
     if mtime_dist > mtime_current:
         print("It looks like test/secrets.py file is out of date.")
-        print("Please copy the new secrets.py-dist file over otherwise" + " tests might fail")
-        pytest.exit("Secrets file out of date")
+        print(
+            "Please copy the new secrets.py-dist file over otherwise"
+            + " tests might fail"
+        )
+        pytest.exit(reason="Secrets file out of date")

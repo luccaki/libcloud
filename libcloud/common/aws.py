@@ -13,24 +13,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Dict
+from typing import Optional
+from typing import Type
+
+import base64
+from datetime import datetime
+import hashlib
 import hmac
 import time
-import base64
-import hashlib
-from typing import Dict, Type, Optional
 from hashlib import sha256
-from datetime import datetime
-
-from libcloud.utils.py3 import ET, b, httplib, urlquote, basestring, _real_unicode
-from libcloud.utils.xml import findall_ignore_namespace, findtext_ignore_namespace
-from libcloud.common.base import BaseDriver, XmlResponse, JsonResponse, ConnectionUserAndKey
-from libcloud.common.types import InvalidCredsError, MalformedResponseError
 
 try:
     import simplejson as json
 except ImportError:
     import json  # type: ignore
 
+from libcloud.utils.py3 import ET
+from libcloud.utils.py3 import _real_unicode
+from libcloud.utils.py3 import basestring
+from libcloud.common.base import ConnectionUserAndKey, XmlResponse, BaseDriver
+from libcloud.common.base import JsonResponse
+from libcloud.common.types import InvalidCredsError, MalformedResponseError
+from libcloud.utils.py3 import b, httplib, urlquote
+from libcloud.utils.xml import findall_ignore_namespace
+from libcloud.utils.xml import findtext_ignore_namespace
 
 __all__ = [
     "AWSBaseResponse",
@@ -73,7 +80,9 @@ class AWSBaseResponse(XmlResponse):
         :return: ``tuple`` with two elements: (code, message)
         :rtype: ``tuple``
         """
-        code = findtext_ignore_namespace(element=element, xpath="Code", namespace=self.namespace)
+        code = findtext_ignore_namespace(
+            element=element, xpath="Code", namespace=self.namespace
+        )
         message = findtext_ignore_namespace(
             element=element, xpath="Message", namespace=self.namespace
         )
@@ -128,7 +137,7 @@ class AWSGenericResponse(AWSBaseResponse):
             exceptionCls = self.exceptions.get(code, None)
 
             if exceptionCls is None:
-                msgs.append("{}: {}".format(code, message))
+                msgs.append("%s: %s" % (code, message))
                 continue
 
             # Custom exception class is defined, immediately throw an exception
@@ -159,7 +168,7 @@ class AWSTokenConnection(ConnectionUserAndKey):
         backoff=None,
     ):
         self.token = token
-        super().__init__(
+        super(AWSTokenConnection, self).__init__(
             user_id,
             key,
             secure=secure,
@@ -177,15 +186,15 @@ class AWSTokenConnection(ConnectionUserAndKey):
         # so that the token is added to the signature.
         if self.token:
             params["x-amz-security-token"] = self.token
-        return super().add_default_params(params)
+        return super(AWSTokenConnection, self).add_default_params(params)
 
     def add_default_headers(self, headers):
         if self.token:
             headers["x-amz-security-token"] = self.token
-        return super().add_default_headers(headers)
+        return super(AWSTokenConnection, self).add_default_headers(headers)
 
 
-class AWSRequestSigner:
+class AWSRequestSigner(object):
     """
     Class which handles signing the outgoing AWS requests.
     """
@@ -281,7 +290,9 @@ class AWSRequestSignerAlgorithmV4(AWSRequestSigner):
 
         return params, headers
 
-    def _get_authorization_v4_header(self, params, headers, dt, method="GET", path="/", data=None):
+    def _get_authorization_v4_header(
+        self, params, headers, dt, method="GET", path="/", data=None
+    ):
         credentials_scope = self._get_credential_scope(dt=dt)
         signed_headers = self._get_signed_headers(headers=headers)
         signature = self._get_signature(
@@ -374,7 +385,7 @@ class AWSRequestSignerAlgorithmV4(AWSRequestSigner):
         # For self.method == GET
         return "&".join(
             [
-                "{}={}".format(urlquote(k, safe=""), urlquote(str(v), safe="~"))
+                "%s=%s" % (urlquote(k, safe=""), urlquote(str(v), safe="~"))
                 for k, v in sorted(params.items())
             ]
         )
@@ -414,7 +425,7 @@ class SignedAWSConnection(AWSTokenConnection):
         backoff=None,
         signature_version=DEFAULT_SIGNATURE_VERSION,
     ):
-        super().__init__(
+        super(SignedAWSConnection, self).__init__(
             user_id=user_id,
             key=key,
             secure=secure,
@@ -444,7 +455,9 @@ class SignedAWSConnection(AWSTokenConnection):
         )
 
     def add_default_params(self, params):
-        params = self.signer.get_request_params(params=params, method=self.method, path=self.action)
+        params = self.signer.get_request_params(
+            params=params, method=self.method, path=self.action
+        )
 
         # Verify that params only contain simple types and no nested
         # dictionaries.
@@ -477,7 +490,7 @@ class AWSJsonResponse(JsonResponse):
         response = json.loads(self.body)
         code = response["__type"]
         message = response.get("Message", response["message"])
-        return "{}: {}".format(code, message)
+        return "%s: %s" % (code, message)
 
 
 def _sign(key, msg, hex=False):
@@ -505,7 +518,7 @@ class AWSDriver(BaseDriver):
         **kwargs,
     ):
         self.token = token
-        super().__init__(
+        super(AWSDriver, self).__init__(
             key,
             secret=secret,
             secure=secure,
@@ -518,6 +531,6 @@ class AWSDriver(BaseDriver):
         )
 
     def _ex_connection_class_kwargs(self):
-        kwargs = super()._ex_connection_class_kwargs()
+        kwargs = super(AWSDriver, self)._ex_connection_class_kwargs()
         kwargs["token"] = self.token
         return kwargs

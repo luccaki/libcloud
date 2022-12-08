@@ -12,14 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import time
+import hashlib
 import random
 import string
-import hashlib
+import time
 
-from libcloud.utils.py3 import httplib, urlencode, basestring
-from libcloud.common.base import JsonResponse, ConnectionUserAndKey
-from libcloud.common.types import ProviderError, InvalidCredsError
+from libcloud.common.base import ConnectionUserAndKey
+from libcloud.common.base import JsonResponse
+from libcloud.common.types import InvalidCredsError, ProviderError
+from libcloud.utils.py3 import basestring, httplib, urlencode
+
 
 SALT_CHARACTERS = string.ascii_letters + string.digits
 
@@ -27,7 +29,7 @@ SALT_CHARACTERS = string.ascii_letters + string.digits
 class NFSNException(ProviderError):
     def __init__(self, value, http_code, code, driver=None):
         self.code = code
-        super().__init__(value, http_code, driver)
+        super(NFSNException, self).__init__(value, http_code, driver)
 
 
 class NFSNResponse(JsonResponse):

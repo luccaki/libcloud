@@ -19,17 +19,20 @@ API documentation: http://docs.nephoscale.com
 Created by Markos Gogoulos (https://mist.io)
 """
 
-import os
-import time
 import base64
+import time
+import os
 import binascii
 
-from libcloud.utils.py3 import b, httplib, urlencode
-from libcloud.common.base import JsonResponse, ConnectionUserAndKey
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeDriver, NodeLocation
-from libcloud.compute.types import NodeState, LibcloudError, InvalidCredsError
-from libcloud.utils.networking import is_private_subnet
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import b
+from libcloud.utils.py3 import urlencode
+
 from libcloud.compute.providers import Provider
+from libcloud.common.base import JsonResponse, ConnectionUserAndKey
+from libcloud.compute.types import NodeState, InvalidCredsError, LibcloudError
+from libcloud.compute.base import Node, NodeDriver, NodeImage, NodeSize, NodeLocation
+from libcloud.utils.networking import is_private_subnet
 
 API_HOST = "api.nephoscale.com"
 
@@ -53,7 +56,7 @@ VALID_RESPONSE_CODES = [
 CONNECT_ATTEMPTS = 10
 
 
-class NodeKey:
+class NodeKey(object):
     def __init__(self, id, name, public_key=None, key_group=None, password=None):
         self.id = id
         self.name = name
@@ -98,7 +101,7 @@ class NephoscaleConnection(ConnectionUserAndKey):
         """
         Add parameters that are necessary for every request
         """
-        user_b64 = base64.b64encode(b("{}:{}".format(self.user_id, self.key)))
+        user_b64 = base64.b64encode(b("%s:%s" % (self.user_id, self.key)))
         headers["Authorization"] = "Basic %s" % (user_b64.decode("utf-8"))
         return headers
 
@@ -229,7 +232,9 @@ class NephoscaleNodeDriver(NodeDriver):
 
     def destroy_node(self, node):
         """destroy a node"""
-        result = self.connection.request("/server/cloud/%s/" % node.id, method="DELETE").object
+        result = self.connection.request(
+            "/server/cloud/%s/" % node.id, method="DELETE"
+        ).object
         return result.get("response") in VALID_RESPONSE_CODES
 
     def ex_start_node(self, node):
@@ -293,7 +298,9 @@ get all keys call with no arguments"
                 key_group = 1
             data = {"name": name, "public_key": public_key, "key_group": key_group}
             params = urlencode(data)
-            result = self.connection.request("/key/sshrsa/", data=params, method="POST").object
+            result = self.connection.request(
+                "/key/sshrsa/", data=params, method="POST"
+            ).object
         else:
             if not key_group:
                 key_group = 4
@@ -301,15 +308,21 @@ get all keys call with no arguments"
                 password = self.random_password()
                 data = {"name": name, "password": password, "key_group": key_group}
             params = urlencode(data)
-            result = self.connection.request("/key/password/", data=params, method="POST").object
+            result = self.connection.request(
+                "/key/password/", data=params, method="POST"
+            ).object
         return result.get("data", {}).get("id", "")
 
     def ex_delete_keypair(self, key_id, ssh=False):
         """Delete an ssh key or password given it's id"""
         if ssh:
-            result = self.connection.request("/key/sshrsa/%s/" % key_id, method="DELETE").object
+            result = self.connection.request(
+                "/key/sshrsa/%s/" % key_id, method="DELETE"
+            ).object
         else:
-            result = self.connection.request("/key/password/%s/" % key_id, method="DELETE").object
+            result = self.connection.request(
+                "/key/password/%s/" % key_id, method="DELETE"
+            ).object
         return result.get("response") in VALID_RESPONSE_CODES
 
     def create_node(

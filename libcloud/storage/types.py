@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class Provider:
+class Provider(object):
     """
     Defines for each of the supported providers
 
@@ -37,6 +37,8 @@ class Provider:
     ordering when adding new drivers.
 
     :cvar DUMMY: Example provider
+    :cvar IPFS: IPFS
+    :cvar GOOGLE_DRIVE: Google DRIVE
     :cvar ALIYUN_OSS: Aliyun OSS storage driver
     :cvar AURORAOBJECTS: AuroraObjects storage driver
     :cvar AZURE_BLOBS: Azure Blob Storage driver
@@ -72,6 +74,8 @@ class Provider:
     """
 
     DUMMY = "dummy"
+    IPFS = "ipfs"
+    GOOGLE_DRIVE = "google_drive"
     ALIYUN_OSS = "aliyun_oss"
     AURORAOBJECTS = "auroraobjects"
     AZURE_BLOBS = "azure_blobs"
@@ -107,7 +111,6 @@ class Provider:
     S3_RGW_OUTSCALE = "s3_rgw_outscale"
     MINIO = "minio"
     SCALEWAY = "scaleway"
-    OVH = "ovh"
 
     # Deperecated
     CLOUDFILES_US = "cloudfiles_us"
@@ -128,10 +131,10 @@ class ContainerError(LibcloudError):
 
     def __init__(self, value, driver, container_name):
         self.container_name = container_name
-        super().__init__(value=value, driver=driver)
+        super(ContainerError, self).__init__(value=value, driver=driver)
 
     def __str__(self):
-        return "<{} in {}, container={}, value={}>".format(
+        return "<%s in %s, container=%s, value=%s>" % (
             self.error_type,
             repr(self.driver),
             self.container_name,
@@ -144,13 +147,13 @@ class ObjectError(LibcloudError):
 
     def __init__(self, value, driver, object_name):
         self.object_name = object_name
-        super().__init__(value=value, driver=driver)
+        super(ObjectError, self).__init__(value=value, driver=driver)
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return "<{} in {}, value={}, object = {}>".format(
+        return "<%s in %s, value=%s, object = %s>" % (
             self.error_type,
             repr(self.driver),
             self.value,

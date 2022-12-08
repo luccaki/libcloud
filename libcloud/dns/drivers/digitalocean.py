@@ -20,10 +20,12 @@ __all__ = ["DigitalOceanDNSDriver"]
 
 import json
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import Provider, RecordType
 from libcloud.utils.py3 import httplib
-from libcloud.common.digitalocean import DigitalOcean_v2_BaseDriver, DigitalOcean_v2_Connection
+
+from libcloud.common.digitalocean import DigitalOcean_v2_BaseDriver
+from libcloud.common.digitalocean import DigitalOcean_v2_Connection
+from libcloud.dns.types import Provider, RecordType
+from libcloud.dns.base import DNSDriver, Zone, Record
 
 
 class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
@@ -60,7 +62,9 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
 
         :return: ``list`` of :class:`Record`
         """
-        data = self._paginated_request("/v2/domains/%s/records" % (zone.id), "domain_records")
+        data = self._paginated_request(
+            "/v2/domains/%s/records" % (zone.id), "domain_records"
+        )
         # TODO: Not use list comprehension to add zone to record for proper data map
         #       functionality? This passes a reference to zone for each data currently
         #       to _to_record which returns a Record. map() does not take keywords
@@ -92,7 +96,7 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
         :rtype: :class:`Record`
         """
         data = self.connection.request(
-            "/v2/domains/{}/records/{}".format(zone_id, record_id)
+            "/v2/domains/%s/records/%s" % (zone_id, record_id)
         ).object["domain_record"]
 
         # TODO: Any way of not using get_zone which polls the API again
@@ -125,7 +129,9 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
         except Exception:
             params["ip_address"] = "127.0.0.1"
 
-        res = self.connection.request("/v2/domains", data=json.dumps(params), method="POST")
+        res = self.connection.request(
+            "/v2/domains", data=json.dumps(params), method="POST"
+        )
 
         return Zone(
             id=res.object["domain"]["name"],
@@ -239,7 +245,7 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
                 params["ttl"] = extra["ttl"]
 
         res = self.connection.request(
-            "/v2/domains/{}/records/{}".format(record.zone.id, record.id),
+            "/v2/domains/%s/records/%s" % (record.zone.id, record.id),
             data=json.dumps(params),
             method="PUT",
         )
@@ -268,7 +274,9 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
         """
         params = {}
 
-        res = self.connection.request("/v2/domains/%s" % zone.id, params=params, method="DELETE")
+        res = self.connection.request(
+            "/v2/domains/%s" % zone.id, params=params, method="DELETE"
+        )
 
         return res.status == httplib.NO_CONTENT
 
@@ -284,7 +292,7 @@ class DigitalOceanDNSDriver(DigitalOcean_v2_BaseDriver, DNSDriver):
         params = {}
 
         res = self.connection.request(
-            "/v2/domains/{}/records/{}".format(record.zone.id, record.id),
+            "/v2/domains/%s/records/%s" % (record.zone.id, record.id),
             params=params,
             method="DELETE",
         )

@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-class Provider:
+class Provider(object):
     """
     Defines for each of the supported providers
 
@@ -76,7 +76,7 @@ OLD_CONSTANT_TO_NEW_MAPPING = {
 }
 
 
-class RecordType:
+class RecordType(object):
     # TODO: Fix all the affected code and tests and use base Type class here
     """
     DNS record type.
@@ -120,13 +120,13 @@ class ZoneError(LibcloudError):
 
     def __init__(self, value, driver, zone_id):
         self.zone_id = zone_id
-        super().__init__(value=value, driver=driver)
+        super(ZoneError, self).__init__(value=value, driver=driver)
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return "<{} in {}, zone_id={}, value={}>".format(
+        return "<%s in %s, zone_id=%s, value=%s>" % (
             self.error_type,
             repr(self.driver),
             self.zone_id,
@@ -147,13 +147,13 @@ class RecordError(LibcloudError):
 
     def __init__(self, value, driver, record_id):
         self.record_id = record_id
-        super().__init__(value=value, driver=driver)
+        super(RecordError, self).__init__(value=value, driver=driver)
 
     def __str__(self):
         return self.__repr__()
 
     def __repr__(self):
-        return "<{} in {}, record_id={}, value={}>".format(
+        return "<%s in %s, record_id=%s, value=%s>" % (
             self.error_type,
             repr(self.driver),
             self.record_id,

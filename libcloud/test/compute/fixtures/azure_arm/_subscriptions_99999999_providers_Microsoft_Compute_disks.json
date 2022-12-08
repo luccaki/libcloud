@@ -2,6 +2,7 @@
   "value": [
     {
       "properties": {
+        "accountType": "Standard_LRS",
         "osType": "Linux",
         "creationData": {
           "createOption": "FromImage",
@@ -15,19 +16,15 @@
         "provisioningState": "Succeeded",
         "diskState": "Attached"
       },
-      "sku": {
-        "name": "Standard_LRS",
-        "tier": "Standard"
-      },
       "type": "Microsoft.Compute/disks",
       "location": "eastus",
       "tags": {},
       "id": "/subscriptions/99999999-9999-9999-9999-999999999999/resourceGroups/000000/providers/Microsoft.Compute/disks/test-disk-1",
-      "name": "test-disk-1",
-      "zones": ["1", "2", "3"]
+      "name": "test-disk-1"
     },
     {
       "properties": {
+        "accountType": "Standard_LRS",
         "osType": "Linux",
         "creationData": {
           "createOption": "FromImage",
@@ -40,19 +37,15 @@
         "provisioningState": "Updating",
         "diskState": "Unattached"
       },
-      "sku": {
-        "name": "Standard_LRS",
-        "tier": "Standard"
-      },
       "type": "Microsoft.Compute/disks",
       "location": "eastus",
       "tags": {},
       "id": "/subscriptions/99999999-9999-9999-9999-999999999999/resourceGroups/000000/providers/Microsoft.Compute/disks/test-disk-2",
-      "name": "test-disk-2",
-      "zones": ["1", "2", "3"]
+      "name": "test-disk-2"
     },
     {
       "properties": {
+        "accountType": "Standard_LRS",
         "osType": "Linux",
         "creationData": {
           "createOption": "Empty"
@@ -62,16 +55,11 @@
         "provisioningState": "Succeeded",
         "diskState": "Unattached"
       },
-      "sku": {
-        "name": "Standard_LRS",
-        "tier": "Standard"
-      },
       "type": "Microsoft.Compute/disks",
       "location": "eastus",
       "tags": {},
       "id": "/subscriptions/99999999-9999-9999-9999-999999999999/resourceGroups/111111/providers/Microsoft.Compute/disks/test-disk-3",
-      "name": "test-disk-3",
-      "zones": ["1", "2", "3"]
+      "name": "test-disk-3"
     }
   ]
 }

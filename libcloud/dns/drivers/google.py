@@ -19,10 +19,11 @@ __all__ = ["GoogleDNSDriver"]
 API_VERSION = "v1"
 
 import re
-
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import Provider, RecordType, ZoneDoesNotExistError, RecordDoesNotExistError
-from libcloud.common.google import GoogleResponse, GoogleBaseConnection, ResourceNotFoundError
+from libcloud.common.google import GoogleResponse, GoogleBaseConnection
+from libcloud.common.google import ResourceNotFoundError
+from libcloud.dns.types import Provider, RecordType
+from libcloud.dns.types import ZoneDoesNotExistError, RecordDoesNotExistError
+from libcloud.dns.base import DNSDriver, Zone, Record
 
 
 class GoogleDNSResponse(GoogleResponse):
@@ -43,7 +44,7 @@ class GoogleDNSConnection(GoogleBaseConnection):
         project=None,
         **kwargs,
     ):
-        super().__init__(
+        super(GoogleDNSConnection, self).__init__(
             user_id,
             key,
             secure=secure,
@@ -51,7 +52,7 @@ class GoogleDNSConnection(GoogleBaseConnection):
             credential_file=credential_file,
             **kwargs,
         )
-        self.request_path = "/dns/{}/projects/{}".format(API_VERSION, project)
+        self.request_path = "/dns/%s/projects/%s" % (API_VERSION, project)
 
 
 class GoogleDNSDriver(DNSDriver):
@@ -74,13 +75,17 @@ class GoogleDNSDriver(DNSDriver):
         RecordType.CAA: "CAA",
     }
 
-    def __init__(self, user_id, key, project=None, auth_type=None, scopes=None, **kwargs):
+    def __init__(
+        self, user_id, key, project=None, auth_type=None, scopes=None, **kwargs
+    ):
         self.auth_type = auth_type
         self.project = project
         self.scopes = scopes
         if not self.project:
-            raise ValueError("Project name must be specified using " '"project" keyword.')
-        super().__init__(user_id, key, **kwargs)
+            raise ValueError(
+                "Project name must be specified using " '"project" keyword.'
+            )
+        super(GoogleDNSDriver, self).__init__(user_id, key, **kwargs)
 
     def iterate_zones(self):
         """
@@ -115,7 +120,9 @@ class GoogleDNSDriver(DNSDriver):
         try:
             response = self.connection.request(request, method="GET").object
         except ResourceNotFoundError:
-            raise ZoneDoesNotExistError(value="", driver=self.connection.driver, zone_id=zone_id)
+            raise ZoneDoesNotExistError(
+                value="", driver=self.connection.driver, zone_id=zone_id
+            )
 
         return self._to_zone(response)
 
@@ -141,15 +148,21 @@ class GoogleDNSDriver(DNSDriver):
         request = "/managedZones/%s/rrsets" % (zone_id)
 
         try:
-            response = self.connection.request(request, method="GET", params=params).object
+            response = self.connection.request(
+                request, method="GET", params=params
+            ).object
         except ResourceNotFoundError:
-            raise ZoneDoesNotExistError(value="", driver=self.connection.driver, zone_id=zone_id)
+            raise ZoneDoesNotExistError(
+                value="", driver=self.connection.driver, zone_id=zone_id
+            )
 
         if len(response["rrsets"]) > 0:
             zone = self.get_zone(zone_id)
             return self._to_record(response["rrsets"][0], zone)
 
-        raise RecordDoesNotExistError(value="", driver=self.connection.driver, record_id=record_id)
+        raise RecordDoesNotExistError(
+            value="", driver=self.connection.driver, record_id=record_id
+        )
 
     def create_zone(self, domain, type="master", ttl=None, extra=None):
         """
@@ -214,7 +227,11 @@ class GoogleDNSDriver(DNSDriver):
         ttl = data.get("ttl", 0)
         rrdatas = data.get("rrdatas", [])
 
-        data = {"additions": [{"name": name, "type": type, "ttl": int(ttl), "rrdatas": rrdatas}]}
+        data = {
+            "additions": [
+                {"name": name, "type": type, "ttl": int(ttl), "rrdatas": rrdatas}
+            ]
+        }
         request = "/managedZones/%s/changes" % (zone.id)
         response = self.connection.request(request, method="POST", data=data).object
         return self._to_record(response["additions"][0], zone)
@@ -298,7 +315,8 @@ class GoogleDNSDriver(DNSDriver):
         exhausted = False
         while not exhausted:
             items, last_key, exhausted = self._get_data(rtype, last_key, **kwargs)
-            yield from items
+            for item in items:
+                yield item
 
     def _get_data(self, rtype, last_key, **kwargs):
         params = {}
@@ -369,7 +387,7 @@ class GoogleDNSDriver(DNSDriver):
         return records
 
     def _to_record(self, r, zone):
-        record_id = "{}:{}".format(r["type"], r["name"])
+        record_id = "%s:%s" % (r["type"], r["name"])
         return Record(
             id=record_id,
             name=r["name"],

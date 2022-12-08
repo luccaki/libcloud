@@ -15,12 +15,14 @@
 import sys
 import unittest
 
-from libcloud.test import MockHttp
-from libcloud.dns.types import RecordType
 from libcloud.utils.py3 import httplib
-from libcloud.test.secrets import DNS_PARAMS_LINODE
+
+from libcloud.dns.types import RecordType
 from libcloud.dns.drivers.linode import LinodeDNSDriver, LinodeDNSDriverV4
+
+from libcloud.test import MockHttp
 from libcloud.test.file_fixtures import DNSFileFixtures
+from libcloud.test.secrets import DNS_PARAMS_LINODE
 
 
 class LinodeTests(unittest.TestCase):
@@ -33,7 +35,9 @@ class LinodeTests(unittest.TestCase):
         self.assertIsInstance(self.driver, LinodeDNSDriverV4)
 
     def test_unknown_api_version(self):
-        self.assertRaises(NotImplementedError, LinodeDNSDriver, "foo", api_version="2.0")
+        self.assertRaises(
+            NotImplementedError, LinodeDNSDriver, "foo", api_version="2.0"
+        )
 
     def test_list_zones(self):
         zones = self.driver.list_zones()

@@ -13,28 +13,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import with_statement
 
-import os
-import hmac
 import base64
 import hashlib
+import hmac
+import os
 import binascii
 from datetime import datetime, timedelta
 
-from libcloud.utils.py3 import ET, b, httplib, tostring, urlquote, urlencode
+from libcloud.utils.py3 import ET
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import urlencode
+from libcloud.utils.py3 import urlquote
+from libcloud.utils.py3 import tostring
+from libcloud.utils.py3 import b
+
 from libcloud.utils.xml import fixxpath
 from libcloud.utils.files import read_in_chunks
-from libcloud.common.azure import AzureConnection, AzureActiveDirectoryConnection
 from libcloud.common.types import LibcloudError
+from libcloud.common.azure import AzureConnection, AzureActiveDirectoryConnection
+
 from libcloud.storage.base import Object, Container, StorageDriver
-from libcloud.storage.types import (
-    ObjectDoesNotExistError,
-    ObjectHashMismatchError,
-    ContainerIsNotEmptyError,
-    InvalidContainerNameError,
-    ContainerDoesNotExistError,
-    ContainerAlreadyExistsError,
-)
+from libcloud.storage.types import ContainerIsNotEmptyError
+from libcloud.storage.types import ContainerAlreadyExistsError
+from libcloud.storage.types import InvalidContainerNameError
+from libcloud.storage.types import ContainerDoesNotExistError
+from libcloud.storage.types import ObjectDoesNotExistError
+from libcloud.storage.types import ObjectHashMismatchError
 
 # Desired number of items in each response inside a paginated request
 RESPONSES_PER_REQUEST = 100
@@ -44,7 +50,9 @@ RESPONSES_PER_REQUEST = 100
 # > 2016-05-31 and later (4 MB for older versions).
 # However for performance reasons, using a lower upload chunk size
 # usually leads to fewer dropped requests and retries.
-AZURE_UPLOAD_CHUNK_SIZE = int(os.getenv("LIBCLOUD_AZURE_UPLOAD_CHUNK_SIZE_MB", "4")) * 1024 * 1024
+AZURE_UPLOAD_CHUNK_SIZE = (
+    int(os.getenv("LIBCLOUD_AZURE_UPLOAD_CHUNK_SIZE_MB", "4")) * 1024 * 1024
+)
 
 AZURE_DOWNLOAD_CHUNK_SIZE = (
     int(os.getenv("LIBCLOUD_AZURE_DOWNLOAD_CHUNK_SIZE_MB", "4")) * 1024 * 1024
@@ -73,11 +81,11 @@ AZURE_STORAGE_CDN_URL_EXPIRY_HOURS = float(
 )
 
 
-class AuthType:
+class AuthType(object):
     AZURE_AD = "azureAD"
 
 
-class AzureBlobLease:
+class AzureBlobLease(object):
     """
     A class to help in leasing an azure blob and renewing the lease
     """
@@ -181,13 +189,13 @@ class AzureBlobsConnection(AzureConnection):
 
     def __init__(self, *args, **kwargs):
         self.account_prefix = kwargs.pop("account_prefix", None)
-        super().__init__(*args, **kwargs)
+        super(AzureBlobsConnection, self).__init__(*args, **kwargs)
 
     def morph_action_hook(self, action):
-        action = super().morph_action_hook(action)
+        action = super(AzureBlobsConnection, self).morph_action_hook(action)
 
         if self.account_prefix is not None:
-            action = "/{}{}".format(self.account_prefix, action)
+            action = "/%s%s" % (self.account_prefix, action)
 
         return action
 
@@ -221,13 +229,15 @@ class AzureBlobsActiveDirectoryConnection(AzureActiveDirectoryConnection):
 
     def __init__(self, *args, **kwargs):
         self.account_prefix = kwargs.pop("account_prefix", None)
-        super().__init__(*args, **kwargs)
+        super(AzureBlobsActiveDirectoryConnection, self).__init__(*args, **kwargs)
 
     def morph_action_hook(self, action):
-        action = super().morph_action_hook(action)
+        action = super(AzureBlobsActiveDirectoryConnection, self).morph_action_hook(
+            action
+        )
 
         if self.account_prefix is not None:
-            action = "/{}{}".format(self.account_prefix, action)
+            action = "/%s%s" % (self.account_prefix, action)
 
         return action
 
@@ -267,7 +277,9 @@ class AzureBlobsStorageDriver(StorageDriver):
             # so for every request. Minor performance improvement
             secret = base64.b64decode(b(secret))
 
-        super().__init__(key=key, secret=secret, secure=secure, host=host, port=port, **kwargs)
+        super(AzureBlobsStorageDriver, self).__init__(
+            key=key, secret=secret, secure=secure, host=host, port=port, **kwargs
+        )
 
     def _ex_connection_class_kwargs(self):
         kwargs = {}
@@ -280,7 +292,7 @@ class AzureBlobsStorageDriver(StorageDriver):
         # if the user didn't provide a custom host value, assume we're
         # targeting the default Azure Storage endpoints
         if self._host is None:
-            kwargs["host"] = "{}.{}".format(self.key, AZURE_STORAGE_HOST_SUFFIX)
+            kwargs["host"] = "%s.%s" % (self.key, AZURE_STORAGE_HOST_SUFFIX)
             return kwargs
 
         # connecting to a special storage region like Azure Government or
@@ -300,7 +312,7 @@ class AzureBlobsStorageDriver(StorageDriver):
         except StopIteration:
             pass
         else:
-            kwargs["host"] = "{}.{}".format(self.key, host_suffix)
+            kwargs["host"] = "%s.%s" % (self.key, host_suffix)
             return kwargs
 
         # if the host isn't targeting one of the special storage regions, it
@@ -337,11 +349,6 @@ class AzureBlobsStorageDriver(StorageDriver):
             "meta_data": {},
         }
 
-        if extra["etag"]:
-            # Remove redundant double quotes around etag value
-            # "0x8CFBAB7B5B82D8E" -> 0x8CFBAB7B5B82D8E
-            extra["etag"] = extra["etag"].replace('"', "")
-
         if metadata is not None:
             for meta in list(metadata):
                 extra["meta_data"][meta.tag] = meta.text
@@ -363,10 +370,9 @@ class AzureBlobsStorageDriver(StorageDriver):
         """
 
         headers = response.headers
-        scheme = "https" if self.secure else "http"
-
         extra = {
-            "url": "{}://{}{}".format(scheme, response.connection.host, response.connection.action),
+            "url": "http://%s%s"
+            % (response.connection.host, response.connection.action),
             "etag": headers["etag"],
             "last_modified": headers["last-modified"],
             "lease": {
@@ -461,10 +467,10 @@ class AzureBlobsStorageDriver(StorageDriver):
         headers = response.headers
         size = int(headers["content-length"])
         etag = headers["etag"]
-        scheme = "https" if self.secure else "http"
 
         extra = {
-            "url": "{}://{}{}".format(scheme, response.connection.host, response.connection.action),
+            "url": "http://%s%s"
+            % (response.connection.host, response.connection.action),
             "etag": etag,
             "md5_hash": headers.get("content-md5", None),
             "content_type": headers.get("content-type", None),
@@ -513,7 +519,9 @@ class AzureBlobsStorageDriver(StorageDriver):
         while True:
             response = self.connection.request("/", params)
             if response.status != httplib.OK:
-                raise LibcloudError("Unexpected status code: %s" % (response.status), driver=self)
+                raise LibcloudError(
+                    "Unexpected status code: %s" % (response.status), driver=self
+                )
 
             body = response.parse_body()
             containers = body.find(fixxpath(xpath="Containers"))
@@ -553,7 +561,9 @@ class AzureBlobsStorageDriver(StorageDriver):
                 )
 
             elif response.status != httplib.OK:
-                raise LibcloudError("Unexpected status code: %s" % (response.status), driver=self)
+                raise LibcloudError(
+                    "Unexpected status code: %s" % (response.status), driver=self
+                )
 
             body = response.parse_body()
             blobs = body.find(fixxpath(xpath="Blobs"))
@@ -583,7 +593,9 @@ class AzureBlobsStorageDriver(StorageDriver):
                 container_name=container_name,
             )
         elif response.status != httplib.OK:
-            raise LibcloudError("Unexpected status code: %s" % (response.status), driver=self)
+            raise LibcloudError(
+                "Unexpected status code: %s" % (response.status), driver=self
+            )
 
         return self._response_to_container(container_name, response)
 
@@ -653,7 +665,9 @@ class AzureBlobsStorageDriver(StorageDriver):
         )
 
         params["sig"] = base64.b64encode(
-            hmac.new(self.secret, string_to_sign.encode("utf-8"), hashlib.sha256).digest()
+            hmac.new(
+                self.secret, string_to_sign.encode("utf-8"), hashlib.sha256
+            ).digest()
         ).decode("utf-8")
 
         return "{scheme}://{host}:{port}{action}?{sas_token}".format(
@@ -691,7 +705,7 @@ class AzureBlobsStorageDriver(StorageDriver):
         """
         container_url = self._get_container_path(container)
         object_name_cleaned = urlquote(object_name)
-        object_path = "{}/{}".format(container_url, object_name_cleaned)
+        object_path = "%s/%s" % (container_url, object_name_cleaned)
         return object_path
 
     def create_container(self, container_name):
@@ -719,7 +733,9 @@ class AzureBlobsStorageDriver(StorageDriver):
                 driver=self,
             )
 
-        raise LibcloudError("Unexpected status code: %s" % (response.status), driver=self)
+        raise LibcloudError(
+            "Unexpected status code: %s" % (response.status), driver=self
+        )
 
     def delete_container(self, container):
         """
@@ -738,12 +754,16 @@ class AzureBlobsStorageDriver(StorageDriver):
         container_path = self._get_container_path(container)
 
         # Note: All the objects in the container must be deleted first
-        response = self.connection.request(container_path, params=params, method="DELETE")
+        response = self.connection.request(
+            container_path, params=params, method="DELETE"
+        )
 
         if response.status == httplib.ACCEPTED:
             return True
         elif response.status == httplib.NOT_FOUND:
-            raise ContainerDoesNotExistError(value=None, driver=self, container_name=container.name)
+            raise ContainerDoesNotExistError(
+                value=None, driver=self, container_name=container.name
+            )
 
         return False
 
@@ -775,7 +795,9 @@ class AzureBlobsStorageDriver(StorageDriver):
         @inherits: :class:`StorageDriver.download_object_as_stream`
         """
         obj_path = self._get_object_path(obj.container, obj.name)
-        response = self.connection.request(obj_path, method="GET", stream=True, raw=True)
+        response = self.connection.request(
+            obj_path, method="GET", stream=True, raw=True
+        )
         iterator = response.iter_content(AZURE_DOWNLOAD_CHUNK_SIZE)
 
         return self._get_object(
@@ -799,7 +821,9 @@ class AzureBlobsStorageDriver(StorageDriver):
 
         obj_path = self._get_object_path(obj.container, obj.name)
         headers = {"x-ms-range": self._get_standard_range_str(start_bytes, end_bytes)}
-        response = self.connection.request(obj_path, headers=headers, raw=True, data=None)
+        response = self.connection.request(
+            obj_path, headers=headers, raw=True, data=None
+        )
 
         # NOTE: Some Azure Blobs implementation return 200 instead of 206
         # status code, see
@@ -822,7 +846,9 @@ class AzureBlobsStorageDriver(StorageDriver):
             success_status_code=success_status_codes,
         )
 
-    def download_object_range_as_stream(self, obj, start_bytes, end_bytes=None, chunk_size=None):
+    def download_object_range_as_stream(
+        self, obj, start_bytes, end_bytes=None, chunk_size=None
+    ):
         self._validate_start_and_end_bytes(start_bytes=start_bytes, end_bytes=end_bytes)
 
         obj_path = self._get_object_path(obj.container, obj.name)
@@ -1019,7 +1045,8 @@ class AzureBlobsStorageDriver(StorageDriver):
         """
         if deprecated_kwargs:
             raise ValueError(
-                "Support for arguments was removed: %s" % ", ".join(deprecated_kwargs.keys())
+                "Support for arguments was removed: %s"
+                % ", ".join(deprecated_kwargs.keys())
             )
 
         blob_size = os.stat(file_path).st_size
@@ -1056,7 +1083,8 @@ class AzureBlobsStorageDriver(StorageDriver):
         """
         if deprecated_kwargs:
             raise ValueError(
-                "Support for arguments was removed: %s" % ", ".join(deprecated_kwargs.keys())
+                "Support for arguments was removed: %s"
+                % ", ".join(deprecated_kwargs.keys())
             )
 
         return self._put_object(

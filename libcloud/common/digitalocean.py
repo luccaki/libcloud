@@ -18,7 +18,10 @@ Common settings and connection objects for DigitalOcean Cloud
 """
 
 from libcloud.utils.py3 import httplib, parse_qs, urlparse
-from libcloud.common.base import BaseDriver, JsonResponse, ConnectionKey
+
+from libcloud.common.base import BaseDriver
+from libcloud.common.base import ConnectionKey
+from libcloud.common.base import JsonResponse
 from libcloud.common.types import LibcloudError, InvalidCredsError
 
 __all__ = [
@@ -45,7 +48,7 @@ class DigitalOcean_v1_Error(LibcloudError):
         ),  # noqa: E501
         driver=None,
     ):
-        super().__init__(value, driver=driver)
+        super(DigitalOcean_v1_Error, self).__init__(value, driver=driver)
 
 
 class DigitalOcean_v2_Response(JsonResponse):
@@ -63,7 +66,7 @@ class DigitalOcean_v2_Response(JsonResponse):
         else:
             body = self.parse_body()
             if "message" in body:
-                error = "{} (code: {})".format(body["message"], self.status)
+                error = "%s (code: %s)" % (body["message"], self.status)
             else:
                 error = body
             return error
@@ -130,7 +133,7 @@ class DigitalOceanBaseDriver(BaseDriver):
                 cls = DigitalOcean_v2_BaseDriver
             else:
                 raise NotImplementedError("Unsupported API version: %s" % (api_version))
-        return super().__new__(cls, **kwargs)
+        return super(DigitalOceanBaseDriver, cls).__new__(cls, **kwargs)
 
     def ex_account_info(self):
         raise NotImplementedError("ex_account_info not implemented for this driver")
@@ -168,7 +171,7 @@ class DigitalOcean_v2_BaseDriver(DigitalOceanBaseDriver):
         **kwargs,
     ):
         self.ex_per_page = ex_per_page
-        super().__init__(key, **kwargs)
+        super(DigitalOcean_v2_BaseDriver, self).__init__(key, **kwargs)
 
     def ex_account_info(self):
         return self.connection.request("/v2/account").object["account"]
@@ -184,7 +187,9 @@ class DigitalOcean_v2_BaseDriver(DigitalOceanBaseDriver):
         :type       event_id: ``str``
         """
         params = {}
-        return self.connection.request("/v2/actions/%s" % event_id, params=params).object["action"]
+        return self.connection.request(
+            "/v2/actions/%s" % event_id, params=params
+        ).object["action"]
 
     def _paginated_request(self, url, obj):
         """

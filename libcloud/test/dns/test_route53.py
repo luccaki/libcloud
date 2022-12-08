@@ -16,12 +16,14 @@
 import sys
 import unittest
 
-from libcloud.test import MockHttp
-from libcloud.dns.types import RecordType, ZoneDoesNotExistError, RecordDoesNotExistError
 from libcloud.utils.py3 import httplib
-from libcloud.test.secrets import DNS_PARAMS_ROUTE53
-from libcloud.test.file_fixtures import DNSFileFixtures
+
+from libcloud.dns.types import RecordType, ZoneDoesNotExistError
+from libcloud.dns.types import RecordDoesNotExistError
 from libcloud.dns.drivers.route53 import Route53DNSDriver
+from libcloud.test import MockHttp
+from libcloud.test.file_fixtures import DNSFileFixtures
+from libcloud.test.secrets import DNS_PARAMS_ROUTE53
 
 
 class Route53Tests(unittest.TestCase):
@@ -129,7 +131,9 @@ class Route53Tests(unittest.TestCase):
             self.fail("Exception was not thrown")
 
     def test_create_zone(self):
-        zone = self.driver.create_zone(domain="t.com", type="master", ttl=None, extra=None)
+        zone = self.driver.create_zone(
+            domain="t.com", type="master", ttl=None, extra=None
+        )
         self.assertEqual(zone.id, "47234")
         self.assertEqual(zone.domain, "t.com")
 
@@ -162,7 +166,9 @@ class Route53Tests(unittest.TestCase):
         Check that TXT records are created in quotes
         """
         zone = self.driver.list_zones()[0]
-        record = self.driver.create_record(name="", zone=zone, type=RecordType.TXT, data="test")
+        record = self.driver.create_record(
+            name="", zone=zone, type=RecordType.TXT, data="test"
+        )
         self.assertEqual(record.id, "TXT:")
         self.assertEqual(record.name, "")
         self.assertEqual(record.zone, zone)
@@ -174,7 +180,9 @@ class Route53Tests(unittest.TestCase):
         Check that TXT values already quoted are not changed
         """
         zone = self.driver.list_zones()[0]
-        record = self.driver.create_record(name="", zone=zone, type=RecordType.TXT, data='"test"')
+        record = self.driver.create_record(
+            name="", zone=zone, type=RecordType.TXT, data='"test"'
+        )
         self.assertEqual(record.id, "TXT:")
         self.assertEqual(record.name, "")
         self.assertEqual(record.zone, zone)
@@ -186,7 +194,9 @@ class Route53Tests(unittest.TestCase):
         Check that SPF records are created in quotes
         """
         zone = self.driver.list_zones()[0]
-        record = self.driver.create_record(name="", zone=zone, type=RecordType.SPF, data="test")
+        record = self.driver.create_record(
+            name="", zone=zone, type=RecordType.SPF, data="test"
+        )
         self.assertEqual(record.id, "SPF:")
         self.assertEqual(record.name, "")
         self.assertEqual(record.zone, zone)
@@ -198,7 +208,9 @@ class Route53Tests(unittest.TestCase):
         Check that SPF values already quoted are not changed
         """
         zone = self.driver.list_zones()[0]
-        record = self.driver.create_record(name="", zone=zone, type=RecordType.SPF, data='"test"')
+        record = self.driver.create_record(
+            name="", zone=zone, type=RecordType.SPF, data='"test"'
+        )
         self.assertEqual(record.id, "SPF:")
         self.assertEqual(record.name, "")
         self.assertEqual(record.zone, zone)
@@ -315,19 +327,27 @@ class Route53MockHttp(MockHttp):
         body = self.fixtures.load("list_records.xml")
         return (httplib.OK, body, {}, httplib.responses[httplib.OK])
 
-    def _2012_02_29_hostedzone_47234_rrset_ZONE_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _2012_02_29_hostedzone_47234_rrset_ZONE_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("zone_does_not_exist.xml")
         return (httplib.NOT_FOUND, body, {}, httplib.responses[httplib.NOT_FOUND])
 
-    def _2012_02_29_hostedzone_4444_ZONE_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _2012_02_29_hostedzone_4444_ZONE_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("zone_does_not_exist.xml")
         return (httplib.NOT_FOUND, body, {}, httplib.responses[httplib.NOT_FOUND])
 
-    def _2012_02_29_hostedzone_47234_ZONE_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _2012_02_29_hostedzone_47234_ZONE_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("zone_does_not_exist.xml")
         return (httplib.NOT_FOUND, body, {}, httplib.responses[httplib.NOT_FOUND])
 
-    def _2012_02_29_hostedzone_47234_rrset_RECORD_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _2012_02_29_hostedzone_47234_rrset_RECORD_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         if method == "POST":
             body = self.fixtures.load("invalid_change_batch.xml")
             return (
@@ -339,7 +359,9 @@ class Route53MockHttp(MockHttp):
         body = self.fixtures.load("record_does_not_exist.xml")
         return (httplib.OK, body, {}, httplib.responses[httplib.OK])
 
-    def _2012_02_29_hostedzone_47234_RECORD_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _2012_02_29_hostedzone_47234_RECORD_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("get_zone.xml")
         return (httplib.OK, body, {}, httplib.responses[httplib.OK])
 

@@ -15,10 +15,13 @@
 
 import sys
 
-from libcloud.test import MockHttp, unittest
-from libcloud.utils.py3 import httplib
-from libcloud.test.file_fixtures import ComputeFileFixtures
 from libcloud.compute.drivers.vsphere import VSphere_REST_NodeDriver
+
+from libcloud.utils.py3 import httplib
+
+from libcloud.test import unittest
+from libcloud.test import MockHttp
+from libcloud.test.file_fixtures import ComputeFileFixtures
 
 
 class KubeVirtTestCase(unittest.TestCase):

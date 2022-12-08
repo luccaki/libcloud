@@ -16,19 +16,20 @@
 import sys
 import unittest
 
+
 from libcloud.test import MockHttp
-from libcloud.dns.base import Zone, Record
+from libcloud.test.file_fixtures import DNSFileFixtures
+from libcloud.test.secrets import DNS_PARAMS_DNSPOD
+from libcloud.dns.drivers.dnspod import DNSPodDNSDriver
+from libcloud.utils.py3 import httplib
 from libcloud.dns.types import (
-    RecordType,
     ZoneDoesNotExistError,
     ZoneAlreadyExistsError,
+    RecordType,
     RecordDoesNotExistError,
     RecordAlreadyExistsError,
 )
-from libcloud.utils.py3 import httplib
-from libcloud.test.secrets import DNS_PARAMS_DNSPOD
-from libcloud.dns.drivers.dnspod import DNSPodDNSDriver
-from libcloud.test.file_fixtures import DNSFileFixtures
+from libcloud.dns.base import Zone, Record
 
 
 class DNSPodDNSTests(unittest.TestCase):
@@ -227,7 +228,9 @@ class DNSPodMockHttp(MockHttp):
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]
 
-    def _Domain_Remove_DELETE_ZONE_ZONE_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _Domain_Remove_DELETE_ZONE_ZONE_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("zone_does_not_exist.json")
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]
@@ -237,7 +240,9 @@ class DNSPodMockHttp(MockHttp):
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]
 
-    def _Domain_Create_CREATE_ZONE_ZONE_ALREADY_EXISTS(self, method, url, body, headers):
+    def _Domain_Create_CREATE_ZONE_ZONE_ALREADY_EXISTS(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("zone_already_exists.json")
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]
@@ -262,7 +267,9 @@ class DNSPodMockHttp(MockHttp):
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]
 
-    def _Record_Remove_DELETE_RECORD_RECORD_DOES_NOT_EXIST(self, method, url, body, headers):
+    def _Record_Remove_DELETE_RECORD_RECORD_DOES_NOT_EXIST(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("delete_record_record_does_not_exist.json")
 
         return httplib.OK, body, {}, httplib.responses[httplib.OK]

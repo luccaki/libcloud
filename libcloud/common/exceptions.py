@@ -14,7 +14,8 @@
 # limitations under the License.
 
 import time
-from email.utils import mktime_tz, parsedate_tz
+
+from email.utils import parsedate_tz, mktime_tz
 
 __all__ = ["BaseHTTPError", "RateLimitReachedError", "exception_from_message"]
 
@@ -31,7 +32,7 @@ class BaseHTTPError(Exception):
         self.headers = headers
         # preserve old exception behavior for tests that
         # look for e.args[0]
-        super().__init__(message)
+        super(BaseHTTPError, self).__init__(message)
 
     def __str__(self):
         return self.message
@@ -47,7 +48,7 @@ class RateLimitReachedError(BaseHTTPError):
 
     def __init__(self, *args, **kwargs):
         headers = kwargs.pop("headers", None)
-        super().__init__(self.code, self.message, headers)
+        super(RateLimitReachedError, self).__init__(self.code, self.message, headers)
         if self.headers is not None:
             self.retry_after = float(self.headers.get("retry-after", 0))
         else:
@@ -55,7 +56,7 @@ class RateLimitReachedError(BaseHTTPError):
 
 
 _error_classes = [RateLimitReachedError]
-_code_map = {c.code: c for c in _error_classes}
+_code_map = dict((c.code, c) for c in _error_classes)
 
 
 def exception_from_message(code, message, headers=None):

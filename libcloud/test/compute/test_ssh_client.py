@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Licensed to the Apache Software Foundation (ASF) under one or more§
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,16 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import absolute_import
+from __future__ import with_statement
 
 import os
 import sys
 import tempfile
-from unittest.mock import Mock, MagicMock, call, patch
 
 from libcloud import _init_once
-from libcloud.test import LibcloudTestCase, unittest
-from libcloud.utils.py3 import StringIO, u, assertRaisesRegex
-from libcloud.compute.ssh import ParamikoSSHClient, ShellOutSSHClient, have_paramiko
+from libcloud.test import LibcloudTestCase
+from libcloud.test import unittest
+from libcloud.compute.ssh import ParamikoSSHClient
+from libcloud.compute.ssh import ShellOutSSHClient
+from libcloud.compute.ssh import have_paramiko
+
+from libcloud.utils.py3 import StringIO
+from libcloud.utils.py3 import u
+from libcloud.utils.py3 import assertRaisesRegex
+
+from unittest.mock import patch, Mock, MagicMock, call
 
 if not have_paramiko:
     ParamikoSSHClient = None  # NOQA
@@ -30,7 +40,7 @@ if not have_paramiko:
 else:
     import paramiko
 
-    paramiko_version = tuple(int(x) for x in paramiko.__version__.split("."))
+    paramiko_version = tuple([int(x) for x in paramiko.__version__.split(".")])
 
 
 @unittest.skipIf(not have_paramiko, "Skipping because paramiko is not available")
@@ -107,13 +117,17 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         }
 
         expected_msg = "key_files and key_material arguments are mutually " "exclusive"
-        assertRaisesRegex(self, ValueError, expected_msg, ParamikoSSHClient, **conn_params)
+        assertRaisesRegex(
+            self, ValueError, expected_msg, ParamikoSSHClient, **conn_params
+        )
 
     @patch("paramiko.SSHClient", Mock)
     def test_key_material_argument(self):
-        path = os.path.join(os.path.dirname(__file__), "fixtures", "misc", "test_rsa.key")
+        path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "misc", "test_rsa.key"
+        )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -147,7 +161,9 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         mock = ParamikoSSHClient(**conn_params)
 
         expected_msg = "Invalid or unsupported key type"
-        assertRaisesRegex(self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect)
+        assertRaisesRegex(
+            self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect
+        )
 
     @patch("paramiko.SSHClient", Mock)
     @unittest.skipIf(
@@ -160,7 +176,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         )
 
         # Supplied as key_material
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -172,7 +188,9 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         mock = ParamikoSSHClient(**conn_params)
 
         expected_msg = "Invalid or unsupported key type"
-        assertRaisesRegex(self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect)
+        assertRaisesRegex(
+            self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect
+        )
 
     @patch("paramiko.SSHClient", Mock)
     def test_password_protected_key_no_password_provided_1(self):
@@ -184,7 +202,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         )
 
         # Supplied as key_material
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -229,7 +247,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         )
 
         # Supplied as key_material
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -242,7 +260,9 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         mock = ParamikoSSHClient(**conn_params)
 
         expected_msg = "OpenSSH private key file checkints do not match"
-        assertRaisesRegex(self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect)
+        assertRaisesRegex(
+            self, paramiko.ssh_exception.SSHException, expected_msg, mock.connect
+        )
 
     @patch("paramiko.SSHClient", Mock)
     def test_password_protected_key_valid_password_provided(self):
@@ -254,7 +274,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         )
 
         # Supplied as key_material
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -279,10 +299,12 @@ class ParamikoSSHClientTests(LibcloudTestCase):
 
     @patch("paramiko.SSHClient", Mock)
     def test_ed25519_key_type(self):
-        path = os.path.join(os.path.dirname(__file__), "fixtures", "misc", "test_ed25519.key")
+        path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "misc", "test_ed25519.key"
+        )
 
         # Supplied as key_material
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         conn_params = {
@@ -309,7 +331,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
             "test_rsa_non_paramiko_recognized_header.key",
         )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -324,7 +346,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
             "test_dsa_non_paramiko_recognized_header.key",
         )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -339,7 +361,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
             "test_ecdsa_non_paramiko_recognized_header.key",
         )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -351,9 +373,11 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         client = ParamikoSSHClient(**conn_params)
 
         # 1. RSA key type with header which is not supported by paramiko
-        path = os.path.join(os.path.dirname(__file__), "fixtures", "misc", "test_rsa.key")
+        path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "misc", "test_rsa.key"
+        )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -361,9 +385,11 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         self.assertTrue(isinstance(pkey, paramiko.RSAKey))
 
         # 2. DSA key type with header which is not supported by paramiko
-        path = os.path.join(os.path.dirname(__file__), "fixtures", "misc", "test_dsa.key")
+        path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "misc", "test_dsa.key"
+        )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -371,9 +397,11 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         self.assertTrue(isinstance(pkey, paramiko.DSSKey))
 
         # 3. ECDSA key type with header which is not supported by paramiko
-        path = os.path.join(os.path.dirname(__file__), "fixtures", "misc", "test_ecdsa.key")
+        path = os.path.join(
+            os.path.dirname(__file__), "fixtures", "misc", "test_ecdsa.key"
+        )
 
-        with open(path) as fp:
+        with open(path, "r") as fp:
             private_key = fp.read()
 
         pkey = client._get_pkey_object(key=private_key)
@@ -445,8 +473,12 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         }
         mock.client.connect.assert_called_once_with(**expected_conn)
 
-    @patch.object(ParamikoSSHClient, "_consume_stdout", MagicMock(return_value=StringIO("")))
-    @patch.object(ParamikoSSHClient, "_consume_stderr", MagicMock(return_value=StringIO("")))
+    @patch.object(
+        ParamikoSSHClient, "_consume_stdout", MagicMock(return_value=StringIO(""))
+    )
+    @patch.object(
+        ParamikoSSHClient, "_consume_stderr", MagicMock(return_value=StringIO(""))
+    )
     def test_basic_usage_absolute_path(self):
         """
         Basic execution.
@@ -503,7 +535,7 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         self.assertLogMsg("Closing server connection")
 
     def assertLogMsg(self, expected_msg):
-        with open(self.tmp_file) as fp:
+        with open(self.tmp_file, "r") as fp:
             content = fp.read()
 
         self.assertTrue(content.find(expected_msg) != -1)
@@ -655,7 +687,9 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         client.client = mock_client
         client.sftp_client = mock_sftp_client
 
-        result = client.put(path="/test/remote/path.txt", contents="foo bar", chmod=455, mode="w")
+        result = client.put(
+            path="/test/remote/path.txt", contents="foo bar", chmod=455, mode="w"
+        )
         self.assertEqual(result, "/test/remote/path.txt")
 
         calls = [call("/"), call("test"), call("remote")]
@@ -682,10 +716,14 @@ class ParamikoSSHClientTests(LibcloudTestCase):
         client.client = mock_client
         client.sftp_client = mock_sftp_client
 
-        result = client.put(path="C:\\users\\user1\\1.txt", contents="foo bar", chmod=455, mode="w")
+        result = client.put(
+            path="C:\\users\\user1\\1.txt", contents="foo bar", chmod=455, mode="w"
+        )
         self.assertEqual(result, "C:\\users\\user1\\1.txt")
 
-        result = client.put(path="\\users\\user1\\1.txt", contents="foo bar", chmod=455, mode="w")
+        result = client.put(
+            path="\\users\\user1\\1.txt", contents="foo bar", chmod=455, mode="w"
+        )
         self.assertEqual(result, "\\users\\user1\\1.txt")
 
         result = client.put(path="1.txt", contents="foo bar", chmod=455, mode="w")
@@ -843,7 +881,7 @@ class ShellOutSSHClientTests(LibcloudTestCase):
             self.fail("Exception was not thrown")
 
     def test_ssh_executable_not_available(self):
-        class MockChild:
+        class MockChild(object):
             returncode = 127
 
             def communicate(*args, **kwargs):
@@ -871,7 +909,9 @@ class ShellOutSSHClientTests(LibcloudTestCase):
 
     def test_get_base_ssh_command(self):
         client1 = ShellOutSSHClient(hostname="localhost", username="root")
-        client2 = ShellOutSSHClient(hostname="localhost", username="root", key="/home/my.key")
+        client2 = ShellOutSSHClient(
+            hostname="localhost", username="root", key="/home/my.key"
+        )
         client3 = ShellOutSSHClient(
             hostname="localhost", username="root", key="/home/my.key", timeout=5
         )

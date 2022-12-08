@@ -26,19 +26,15 @@ Blue Box API documentation    https://boxpanel.bluebox
 import copy
 import base64
 
-from libcloud.utils.py3 import b, urlencode
+from libcloud.utils.py3 import urlencode
+from libcloud.utils.py3 import b
+
 from libcloud.common.base import JsonResponse, ConnectionUserAndKey
-from libcloud.compute.base import (
-    Node,
-    NodeSize,
-    NodeImage,
-    NodeDriver,
-    NodeLocation,
-    NodeAuthSSHKey,
-    NodeAuthPassword,
-)
-from libcloud.compute.types import NodeState, InvalidCredsError
 from libcloud.compute.providers import Provider
+from libcloud.compute.types import NodeState, InvalidCredsError
+from libcloud.compute.base import Node, NodeDriver
+from libcloud.compute.base import NodeSize, NodeImage, NodeLocation
+from libcloud.compute.base import NodeAuthPassword, NodeAuthSSHKey
 
 # Current end point for Blue Box API.
 BLUEBOX_API_HOST = "boxpanel.bluebox.net"
@@ -110,7 +106,8 @@ class BlueboxNodeSize(NodeSize):
 
     def __repr__(self):
         return (
-            "<NodeSize: id=%s, name=%s, cpu=%s, ram=%s, disk=%s, " "price=%s, driver=%s ...>"
+            "<NodeSize: id=%s, name=%s, cpu=%s, ram=%s, disk=%s, "
+            "price=%s, driver=%s ...>"
         ) % (
             self.id,
             self.name,
@@ -134,7 +131,7 @@ class BlueboxConnection(ConnectionUserAndKey):
     allow_insecure = False
 
     def add_default_headers(self, headers):
-        user_b64 = base64.b64encode(b("{}:{}".format(self.user_id, self.key)))
+        user_b64 = base64.b64encode(b("%s:%s" % (self.user_id, self.key)))
         headers["Authorization"] = "Basic %s" % (user_b64)
         return headers
 
@@ -234,5 +231,7 @@ class BlueboxNodeDriver(NodeDriver):
         return n
 
     def _to_image(self, image):
-        image = NodeImage(id=image["id"], name=image["description"], driver=self.connection.driver)
+        image = NodeImage(
+            id=image["id"], name=image["description"], driver=self.connection.driver
+        )
         return image

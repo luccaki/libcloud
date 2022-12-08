@@ -20,11 +20,10 @@ import os
 import base64
 
 from libcloud.utils.py3 import b
-from libcloud.common.kubernetes import (
-    KubernetesTLSAuthConnection,
-    KubernetesBasicAuthConnection,
-    KubernetesTokenAuthConnection,
-)
+
+from libcloud.common.kubernetes import KubernetesBasicAuthConnection
+from libcloud.common.kubernetes import KubernetesTLSAuthConnection
+from libcloud.common.kubernetes import KubernetesTokenAuthConnection
 
 KEY_FILE = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../compute/fixtures/azure/libcloud.pem")
@@ -37,7 +36,7 @@ CA_CERT_FILE = os.path.abspath(
 )
 
 
-class KubernetesAuthTestCaseMixin:
+class KubernetesAuthTestCaseMixin(object):
     """
     Test class mixin which tests different type of Kubernetes authentication
     mechanisms (client cert, token, basic auth).
@@ -51,7 +50,9 @@ class KubernetesAuthTestCaseMixin:
         self.assertEqual(driver.connection.user_id, "username")
         self.assertEqual(driver.connection.key, "password")
 
-        auth_string = base64.b64encode(b("{}:{}".format("username", "password"))).decode("utf-8")
+        auth_string = base64.b64encode(b("%s:%s" % ("username", "password"))).decode(
+            "utf-8"
+        )
 
         headers = driver.connection.add_default_headers({})
         self.assertEqual(headers["Content-Type"], "application/json")
@@ -79,7 +80,9 @@ class KubernetesAuthTestCaseMixin:
         )
 
         # ca_cert argument specified
-        driver = self.driver_cls(key_file=KEY_FILE, cert_file=CERT_FILE, ca_cert=CA_CERT_FILE)
+        driver = self.driver_cls(
+            key_file=KEY_FILE, cert_file=CERT_FILE, ca_cert=CA_CERT_FILE
+        )
         self.assertEqual(driver.connectionCls, KubernetesTLSAuthConnection)
         self.assertEqual(driver.connection.key_file, KEY_FILE)
         self.assertEqual(driver.connection.cert_file, CERT_FILE)

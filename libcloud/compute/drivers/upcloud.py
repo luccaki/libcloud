@@ -15,20 +15,19 @@
 """
 Upcloud node driver
 """
-import json
 import base64
+import json
 
-from libcloud.utils.py3 import b, httplib
-from libcloud.common.base import JsonResponse, ConnectionUserAndKey
-from libcloud.common.types import InvalidCredsError
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeState, NodeDriver, NodeLocation
+from libcloud.utils.py3 import httplib, b
+from libcloud.compute.base import NodeDriver, NodeLocation, NodeSize
+from libcloud.compute.base import NodeImage, Node, NodeState
 from libcloud.compute.types import Provider
-from libcloud.common.upcloud import (
-    PlanPrice,
-    UpcloudNodeDestroyer,
-    UpcloudNodeOperations,
-    UpcloudCreateNodeRequestBody,
-)
+from libcloud.common.base import ConnectionUserAndKey, JsonResponse
+from libcloud.common.types import InvalidCredsError
+from libcloud.common.upcloud import UpcloudCreateNodeRequestBody
+from libcloud.common.upcloud import UpcloudNodeDestroyer
+from libcloud.common.upcloud import UpcloudNodeOperations
+from libcloud.common.upcloud import PlanPrice
 
 
 class UpcloudResponse(JsonResponse):
@@ -39,7 +38,7 @@ class UpcloudResponse(JsonResponse):
     def success(self):
         if self.status == httplib.NO_CONTENT:
             return True
-        return super().success()
+        return super(UpcloudResponse, self).success()
 
     def parse_error(self):
         data = self.parse_body()
@@ -65,9 +64,9 @@ class UpcloudConnection(ConnectionUserAndKey):
 
     def _basic_auth(self):
         """Constructs basic auth header content string"""
-        credentials = b("{}:{}".format(self.user_id, self.key))
+        credentials = b("{0}:{1}".format(self.user_id, self.key))
         credentials = base64.b64encode(credentials)
-        return "Basic {}".format(credentials.decode("ascii"))
+        return "Basic {0}".format(credentials.decode("ascii"))
 
 
 class UpcloudDriver(NodeDriver):
@@ -95,7 +94,7 @@ class UpcloudDriver(NodeDriver):
     }
 
     def __init__(self, username, password, **kwargs):
-        super().__init__(key=username, secret=password, **kwargs)
+        super(UpcloudDriver, self).__init__(key=username, secret=password, **kwargs)
 
     def list_locations(self):
         """
@@ -190,7 +189,9 @@ class UpcloudDriver(NodeDriver):
             ex_hostname=ex_hostname,
             ex_username=ex_username,
         )
-        response = self.connection.request("1.2/server", method="POST", data=body.to_json())
+        response = self.connection.request(
+            "1.2/server", method="POST", data=body.to_json()
+        )
         server = response.object["server"]
         # Upcloud server's are in maintenace state when goind
         # from state to other, it is safe to assume STARTING state
@@ -205,7 +206,7 @@ class UpcloudDriver(NodeDriver):
         """
         servers = []
         for nid in self._node_ids():
-            response = self.connection.request("1.2/server/{}".format(nid))
+            response = self.connection.request("1.2/server/{0}".format(nid))
             servers.append(response.object["server"])
         return self._to_nodes(servers)
 
@@ -220,7 +221,7 @@ class UpcloudDriver(NodeDriver):
         """
         body = {"restart_server": {"stop_type": "hard"}}
         self.connection.request(
-            "1.2/server/{}/restart".format(node.id),
+            "1.2/server/{0}/restart".format(node.id),
             method="POST",
             data=json.dumps(body),
         )
@@ -256,7 +257,9 @@ class UpcloudDriver(NodeDriver):
     def _to_node(self, server, state=None):
         ip_addresses = server["ip_addresses"]["ip_address"]
         public_ips = [ip["address"] for ip in ip_addresses if ip["access"] == "public"]
-        private_ips = [ip["address"] for ip in ip_addresses if ip["access"] == "private"]
+        private_ips = [
+            ip["address"] for ip in ip_addresses if ip["access"] == "private"
+        ]
 
         extra = {"vnc_password": server["vnc_password"]}
         if "password" in server:
@@ -309,7 +312,9 @@ class UpcloudDriver(NodeDriver):
 
     def _construct_node_image(self, image):
         extra = self._copy_dict(("access", "license", "size", "state", "type"), image)
-        return NodeImage(id=image["uuid"], name=image["title"], driver=self, extra=extra)
+        return NodeImage(
+            id=image["uuid"], name=image["title"], driver=self, extra=extra
+        )
 
     def _copy_dict(self, keys, d):
         extra = {}

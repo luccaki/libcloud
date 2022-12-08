@@ -15,16 +15,14 @@
 Zonomi DNS Driver
 """
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import (
-    Provider,
-    RecordType,
-    ZoneDoesNotExistError,
-    ZoneAlreadyExistsError,
-    RecordDoesNotExistError,
-    RecordAlreadyExistsError,
-)
-from libcloud.common.zonomi import ZonomiResponse, ZonomiException, ZonomiConnection
+from libcloud.common.zonomi import ZonomiConnection, ZonomiResponse
+from libcloud.common.zonomi import ZonomiException
+from libcloud.dns.base import DNSDriver, Zone, Record
+from libcloud.dns.types import ZoneDoesNotExistError, ZoneAlreadyExistsError
+from libcloud.dns.types import RecordAlreadyExistsError
+from libcloud.dns.types import RecordDoesNotExistError
+from libcloud.dns.types import Provider, RecordType
+
 
 __all__ = [
     "ZonomiDNSDriver",
@@ -76,7 +74,9 @@ class ZonomiDNSDriver(DNSDriver):
             response = self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if e.code == "404":
-                raise ZoneDoesNotExistError(zone_id=zone.id, driver=self, value=e.message)
+                raise ZoneDoesNotExistError(
+                    zone_id=zone.id, driver=self, value=e.message
+                )
             raise e
 
         records = self._to_records(response.objects, zone)
@@ -143,10 +143,14 @@ class ZonomiDNSDriver(DNSDriver):
             self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if e.message == "ERROR: This zone is already in your zone list.":
-                raise ZoneAlreadyExistsError(zone_id=domain, driver=self, value=e.message)
+                raise ZoneAlreadyExistsError(
+                    zone_id=domain, driver=self, value=e.message
+                )
             raise e
 
-        zone = Zone(id=domain, domain=domain, type="master", ttl=ttl, driver=self, extra=extra)
+        zone = Zone(
+            id=domain, domain=domain, type="master", ttl=ttl, driver=self, extra=extra
+        )
         return zone
 
     def create_record(self, name, zone, type, data, extra=None):
@@ -187,14 +191,19 @@ class ZonomiDNSDriver(DNSDriver):
             response = self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if ("ERROR: No zone found for %s" % record_name) in e.message:
-                raise ZoneDoesNotExistError(zone_id=zone.id, driver=self, value=e.message)
+                raise ZoneDoesNotExistError(
+                    zone_id=zone.id, driver=self, value=e.message
+                )
             raise e
 
         # we determine if an A or MX record already exists
         # by looking at the response.If the key 'skipped' is present in the
         # response, it means record already exists. If this is True,
         # then raise RecordAlreadyExistsError
-        if len(response.objects) != 0 and response.objects[0].get("skipped") == "unchanged":
+        if (
+            len(response.objects) != 0
+            and response.objects[0].get("skipped") == "unchanged"
+        ):
             raise RecordAlreadyExistsError(record_id=name, driver=self, value="")
 
         if "DELETED" in response.objects:
@@ -221,7 +230,9 @@ class ZonomiDNSDriver(DNSDriver):
             response = self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if e.code == "404":
-                raise ZoneDoesNotExistError(zone_id=zone.id, driver=self, value=e.message)
+                raise ZoneDoesNotExistError(
+                    zone_id=zone.id, driver=self, value=e.message
+                )
             raise e
 
         return "DELETED" in response.objects
@@ -241,7 +252,9 @@ class ZonomiDNSDriver(DNSDriver):
             response = self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if e.message == "Record not deleted.":
-                raise RecordDoesNotExistError(record_id=record.id, driver=self, value=e.message)
+                raise RecordDoesNotExistError(
+                    record_id=record.id, driver=self, value=e.message
+                )
             raise e
 
         return "DELETED" in response.objects
@@ -264,7 +277,9 @@ class ZonomiDNSDriver(DNSDriver):
             self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if "ERROR: Could not find" in e.message:
-                raise ZoneDoesNotExistError(zone_id=zone.id, driver=self, value=e.message)
+                raise ZoneDoesNotExistError(
+                    zone_id=zone.id, driver=self, value=e.message
+                )
         return True
 
     def ex_convert_to_master(self, zone):
@@ -282,7 +297,9 @@ class ZonomiDNSDriver(DNSDriver):
             self.connection.request(action=action, params=params)
         except ZonomiException as e:
             if "ERROR: Could not find" in e.message:
-                raise ZoneDoesNotExistError(zone_id=zone.id, driver=self, value=e.message)
+                raise ZoneDoesNotExistError(
+                    zone_id=zone.id, driver=self, value=e.message
+                )
         return True
 
     def _to_zone(self, item):

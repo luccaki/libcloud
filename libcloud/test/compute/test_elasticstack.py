@@ -14,19 +14,21 @@
 # limitations under the License.
 
 import sys
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import assertRaisesRegex
+
+from libcloud.compute.base import Node
+from libcloud.compute.drivers.elasticstack import ElasticStackException
+from libcloud.compute.drivers.elastichosts import ElasticHostsNodeDriver as ElasticHosts
+from libcloud.compute.drivers.skalicloud import SkaliCloudNodeDriver as SkaliCloud
+from libcloud.compute.drivers.serverlove import ServerLoveNodeDriver as ServerLove
+from libcloud.common.types import InvalidCredsError, MalformedResponseError
 
 from libcloud.test import MockHttp, unittest
-from libcloud.utils.py3 import httplib, assertRaisesRegex
-from libcloud.common.types import InvalidCredsError, MalformedResponseError
-from libcloud.compute.base import Node
 from libcloud.test.file_fixtures import ComputeFileFixtures
-from libcloud.compute.drivers.serverlove import ServerLoveNodeDriver as ServerLove
-from libcloud.compute.drivers.skalicloud import SkaliCloudNodeDriver as SkaliCloud
-from libcloud.compute.drivers.elastichosts import ElasticHostsNodeDriver as ElasticHosts
-from libcloud.compute.drivers.elasticstack import ElasticStackException
 
 
-class ElasticStackTestCase:
+class ElasticStackTestCase(object):
     def setUp(self):
         # Re-use ElasticHosts fixtures for the base ElasticStack platform tests
         self.mockHttp = ElasticStackMockHttp
@@ -69,7 +71,9 @@ class ElasticStackTestCase:
             self.fail("test should have thrown")
 
     def test_ex_set_node_configuration(self):
-        success = self.driver.ex_set_node_configuration(node=self.node, name="name", cpu="2")
+        success = self.driver.ex_set_node_configuration(
+            node=self.node, name="name", cpu="2"
+        )
         self.assertTrue(success)
 
     def test_ex_set_node_configuration_invalid_keys(self):
@@ -135,7 +139,9 @@ class ElasticStackTestCase:
         size = [s for s in sizes if s.id == "large"][0]
         image = self.image
 
-        self.assertTrue(self.driver.create_node(name="api.ivan.net.nz", image=image, size=size))
+        self.assertTrue(
+            self.driver.create_node(name="api.ivan.net.nz", image=image, size=size)
+        )
 
 
 class ElasticHostsTestCase(ElasticStackTestCase, unittest.TestCase):
@@ -144,8 +150,10 @@ class ElasticHostsTestCase(ElasticStackTestCase, unittest.TestCase):
 
         self.driver = ElasticHosts("foo", "bar")
         images = self.driver.list_images()
-        self.image = [i for i in images if i.id == "38df0986-4d85-4b76-b502-3878ffc80161"][0]
-        super().setUp()
+        self.image = [
+            i for i in images if i.id == "38df0986-4d85-4b76-b502-3878ffc80161"
+        ][0]
+        super(ElasticHostsTestCase, self).setUp()
 
     def test_multiple_drivers_with_different_regions(self):
         driver1 = ElasticHosts("foo", "bar", region="lon-p")
@@ -175,8 +183,10 @@ class SkaliCloudTestCase(ElasticStackTestCase, unittest.TestCase):
         self.driver = SkaliCloud("foo", "bar")
 
         images = self.driver.list_images()
-        self.image = [i for i in images if i.id == "90aa51f2-15c0-4cff-81ee-e93aa20b9468"][0]
-        super().setUp()
+        self.image = [
+            i for i in images if i.id == "90aa51f2-15c0-4cff-81ee-e93aa20b9468"
+        ][0]
+        super(SkaliCloudTestCase, self).setUp()
 
 
 class ServerLoveTestCase(ElasticStackTestCase, unittest.TestCase):
@@ -186,8 +196,10 @@ class ServerLoveTestCase(ElasticStackTestCase, unittest.TestCase):
         self.driver = ServerLove("foo", "bar")
 
         images = self.driver.list_images()
-        self.image = [i for i in images if i.id == "679f5f44-0be7-4745-a658-cccd4334c1aa"][0]
-        super().setUp()
+        self.image = [
+            i for i in images if i.id == "679f5f44-0be7-4745-a658-cccd4334c1aa"
+        ][0]
+        super(ServerLoveTestCase, self).setUp()
 
 
 class ElasticStackMockHttp(MockHttp):
@@ -204,10 +216,14 @@ class ElasticStackMockHttp(MockHttp):
     def _servers_info_PARSE_ERROR(self, method, url, body, headers):
         return (505, body, {}, httplib.responses[httplib.NO_CONTENT])
 
-    def _servers_b605ca90_c3e6_4cee_85f8_a8ebdf8f9903_reset(self, method, url, body, headers):
+    def _servers_b605ca90_c3e6_4cee_85f8_a8ebdf8f9903_reset(
+        self, method, url, body, headers
+    ):
         return (httplib.NO_CONTENT, body, {}, httplib.responses[httplib.NO_CONTENT])
 
-    def _servers_b605ca90_c3e6_4cee_85f8_a8ebdf8f9903_destroy(self, method, url, body, headers):
+    def _servers_b605ca90_c3e6_4cee_85f8_a8ebdf8f9903_destroy(
+        self, method, url, body, headers
+    ):
         return (httplib.NO_CONTENT, body, {}, httplib.responses[httplib.NO_CONTENT])
 
     def _drives_create(self, method, url, body, headers):
@@ -232,7 +248,9 @@ class ElasticStackMockHttp(MockHttp):
         # ServerLove image
         return (httplib.NO_CONTENT, body, {}, httplib.responses[httplib.NO_CONTENT])
 
-    def _drives_0012e24a_6eae_4279_9912_3432f698cec8_info(self, method, url, body, headers):
+    def _drives_0012e24a_6eae_4279_9912_3432f698cec8_info(
+        self, method, url, body, headers
+    ):
         body = self.fixtures.load("drives_info.json")
         return (httplib.OK, body, {}, httplib.responses[httplib.OK])
 

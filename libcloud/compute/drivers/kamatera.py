@@ -16,13 +16,14 @@
 Kamatera node driver
 """
 import json
-import time
 import datetime
+import time
 
 from libcloud.utils.py3 import basestring
-from libcloud.common.base import JsonResponse, ConnectionUserAndKey
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeState, NodeDriver, NodeLocation
+from libcloud.compute.base import NodeDriver, NodeLocation, NodeSize
+from libcloud.compute.base import NodeImage, Node, NodeState
 from libcloud.compute.types import Provider
+from libcloud.common.base import ConnectionUserAndKey, JsonResponse
 
 
 class KamateraResponse(JsonResponse):
@@ -83,7 +84,9 @@ class KamateraNodeDriver(NodeDriver):
         """
         response = self.connection.request("service/server?datacenter=1")
         return [
-            self.ex_get_location(datacenter["id"], datacenter["subCategory"], datacenter["name"])
+            self.ex_get_location(
+                datacenter["id"], datacenter["subCategory"], datacenter["name"]
+            )
             for datacenter in response.object
         ]
 
@@ -96,7 +99,9 @@ class KamateraNodeDriver(NodeDriver):
 
         @inherits: :class:`NodeDriver.list_sizes`
         """
-        response = self.connection.request("service/server?sizes=1&datacenter=%s" % location.id)
+        response = self.connection.request(
+            "service/server?sizes=1&datacenter=%s" % location.id
+        )
         return [
             self.ex_get_size(
                 size["ramMB"],
@@ -120,10 +125,14 @@ class KamateraNodeDriver(NodeDriver):
 
         :rtype: ``list`` of :class:`NodeImage`
         """
-        response = self.connection.request("service/server?images=1&datacenter=%s" % location.id)
+        response = self.connection.request(
+            "service/server?images=1&datacenter=%s" % location.id
+        )
         images = []
         for image in response.object:
-            extra = self._copy_dict(("datacenter", "os", "code", "osDiskSizeGB", "ramMBMin"), image)
+            extra = self._copy_dict(
+                ("datacenter", "os", "code", "osDiskSizeGB", "ramMBMin"), image
+            )
             images.append(self.ex_get_image(image["name"], image["id"], extra))
         return images
 
@@ -206,16 +215,19 @@ class KamateraNodeDriver(NodeDriver):
             "ssh-key": pubkey or "",
             "datacenter": location.id,
             "image": image.id,
-            "cpu": "{}{}".format(size.extra["cpuCores"], size.extra["cpuType"]),
+            "cpu": "%s%s" % (size.extra["cpuCores"], size.extra["cpuType"]),
             "ram": size.ram,
             "disk": " ".join(
-                ["size=%d" % disksize for disksize in [size.disk] + size.extra["extraDiskSizesGB"]]
+                [
+                    "size=%d" % disksize
+                    for disksize in [size.disk] + size.extra["extraDiskSizesGB"]
+                ]
             ),
             "dailybackup": "yes" if ex_dailybackup else "no",
             "managed": "yes" if ex_managed else "no",
             "network": " ".join(
                 [
-                    ",".join(["{}={}".format(k, v) for k, v in network.items()])
+                    ",".join(["%s=%s" % (k, v) for k, v in network.items()])
                     for network in ex_networks
                 ]
             ),
@@ -261,7 +273,9 @@ class KamateraNodeDriver(NodeDriver):
                     command["completed"], "%Y-%m-%d %H:%M:%S"
                 )
             name_lines = [
-                line for line in node.extra["create_log"].split("\n") if line.startswith("Name: ")
+                line
+                for line in node.extra["create_log"].split("\n")
+                if line.startswith("Name: ")
             ]
             if len(name_lines) != 1:
                 raise RuntimeError("Invalid node create log response")
@@ -310,7 +324,11 @@ class KamateraNodeDriver(NodeDriver):
                 self.ex_get_node(
                     id=server["id"],
                     name=server["name"],
-                    state=(NodeState.RUNNING if server["power"] == "on" else NodeState.STOPPED),
+                    state=(
+                        NodeState.RUNNING
+                        if server["power"] == "on"
+                        else NodeState.STOPPED
+                    ),
                     location=self.ex_get_location(server["datacenter"]),
                 )
                 for server in response.object
@@ -392,7 +410,9 @@ class KamateraNodeDriver(NodeDriver):
         elif node.name:
             request_data = {"name": node.name}
         else:
-            raise ValueError("Invalid node for %s node operation: " "missing id / name" % operation)
+            raise ValueError(
+                "Invalid node for %s node operation: " "missing id / name" % operation
+            )
         if operation == "terminate":
             request_data["force"] = True
         command_id = self.connection.request(
@@ -528,7 +548,8 @@ class KamateraNodeDriver(NodeDriver):
             if max_time < datetime.datetime.now():
                 raise TimeoutError(
                     "Timeout waiting for command "
-                    "(timeout_seconds=%s, command_id=%s)" % (str(timeout_seconds), str(command_id))
+                    "(timeout_seconds=%s, command_id=%s)"
+                    % (str(timeout_seconds), str(command_id))
                 )
             time.sleep(poll_interval_seconds)
             command = self.ex_get_command_status(command_id)

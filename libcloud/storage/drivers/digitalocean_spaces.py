@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from libcloud.common.aws import SignedAWSConnection
 from libcloud.common.types import LibcloudError
-from libcloud.storage.drivers.s3 import S3Connection, BaseS3Connection, BaseS3StorageDriver
+from libcloud.common.aws import SignedAWSConnection
+from libcloud.storage.drivers.s3 import BaseS3Connection, S3Connection
+from libcloud.storage.drivers.s3 import BaseS3StorageDriver
 
 __all__ = ["DigitalOceanSpacesStorageDriver"]
 
@@ -50,7 +51,7 @@ class DOSpacesConnectionAWS4(SignedAWSConnection, BaseS3Connection):
         **kwargs,
     ):
 
-        super().__init__(
+        super(DOSpacesConnectionAWS4, self).__init__(
             user_id,
             key,
             secure,
@@ -83,7 +84,7 @@ class DOSpacesConnectionAWS2(S3Connection):
         **kwargs,
     ):
 
-        super().__init__(
+        super(DOSpacesConnectionAWS2, self).__init__(
             user_id,
             key,
             secure,
@@ -123,7 +124,9 @@ class DigitalOceanSpacesStorageDriver(BaseS3StorageDriver):
         self.name = "DigitalOcean Spaces (%s)" % (region)
 
         self.region_name = region
-        self.signature_version = str(kwargs.pop("signature_version", DEFAULT_SIGNATURE_VERSION))
+        self.signature_version = str(
+            kwargs.pop("signature_version", DEFAULT_SIGNATURE_VERSION)
+        )
 
         if self.signature_version == "2":
             self.connectionCls = DOSpacesConnectionAWS2
@@ -133,7 +136,9 @@ class DigitalOceanSpacesStorageDriver(BaseS3StorageDriver):
             raise ValueError("Invalid signature_version: %s" % (self.signature_version))
         self.connectionCls.host = host
 
-        super().__init__(key, secret, secure, host, port, api_version, region, **kwargs)
+        super(DigitalOceanSpacesStorageDriver, self).__init__(
+            key, secret, secure, host, port, api_version, region, **kwargs
+        )
 
     def _ex_connection_class_kwargs(self):
         kwargs = {}

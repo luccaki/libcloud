@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import List
+from typing import Dict
 
-from libcloud.common.base import JsonResponse, ConnectionKey
+from libcloud.common.base import ConnectionKey, JsonResponse
+
 
 __all__ = ["API_HOST", "BuddyNSException", "BuddyNSResponse", "BuddyNSConnection"]
 
@@ -28,13 +30,15 @@ class BuddyNSResponse(JsonResponse):
     objects = []  # type: List[Dict]
 
     def __init__(self, response, connection):
-        super().__init__(response=response, connection=connection)
+        super(BuddyNSResponse, self).__init__(response=response, connection=connection)
         self.errors, self.objects = self.parse_body_and_errors()
         if not self.success():
-            raise BuddyNSException(code=self.status, message=self.errors.pop()["detail"])
+            raise BuddyNSException(
+                code=self.status, message=self.errors.pop()["detail"]
+            )
 
     def parse_body_and_errors(self):
-        js = super().parse_body()
+        js = super(BuddyNSResponse, self).parse_body()
         if "detail" in js:
             self.errors.append(js)
         else:
@@ -64,7 +68,7 @@ class BuddyNSException(Exception):
         self.args = (code, message)
 
     def __str__(self):
-        return "{} {}".format(self.code, self.message)
+        return "%s %s" % (self.code, self.message)
 
     def __repr__(self):
-        return "BuddyNSException {} {}".format(self.code, self.message)
+        return "BuddyNSException %s %s" % (self.code, self.message)

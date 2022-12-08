@@ -32,7 +32,7 @@ class LibcloudLBImmutableError(LibcloudLBError):
     pass
 
 
-class Provider:
+class Provider(object):
     """
     Defines for each of the supported providers
 
@@ -66,7 +66,7 @@ OLD_CONSTANT_TO_NEW_MAPPING = {
 }
 
 
-class State:
+class State(object):
     """
     Standard states for a loadbalancer
 
@@ -81,7 +81,7 @@ class State:
     DELETED = 4
 
 
-class MemberCondition:
+class MemberCondition(object):
     """
     Each member of a load balancer can have an associated condition
     which determines its role within the load balancer.

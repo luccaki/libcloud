@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from libcloud.common.aws import SignedAWSConnection
 from libcloud.common.types import LibcloudError
-from libcloud.storage.drivers.s3 import API_VERSION, BaseS3Connection, BaseS3StorageDriver
+from libcloud.common.aws import SignedAWSConnection
+from libcloud.storage.drivers.s3 import BaseS3Connection
+from libcloud.storage.drivers.s3 import BaseS3StorageDriver
+from libcloud.storage.drivers.s3 import API_VERSION
 
 __all__ = ["MinIOStorageDriver"]
 
@@ -40,7 +42,7 @@ class MinIOConnectionAWS4(SignedAWSConnection, BaseS3Connection):
         **kwargs,
     ):
 
-        super().__init__(
+        super(MinIOConnectionAWS4, self).__init__(
             user_id,
             key,
             secure,
@@ -68,4 +70,6 @@ class MinIOStorageDriver(BaseS3StorageDriver):
 
         self.connectionCls.host = host
 
-        super().__init__(key=key, secret=secret, secure=secure, host=host, port=port)
+        super(MinIOStorageDriver, self).__init__(
+            key=key, secret=secret, secure=secure, host=host, port=port
+        )

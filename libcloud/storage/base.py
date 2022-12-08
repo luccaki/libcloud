@@ -18,18 +18,27 @@ Provides base classes for working with storage
 """
 
 # Backward compatibility for Python 2.5
+from __future__ import with_statement
 
-import errno
-import hashlib
+from typing import Dict
+from typing import Iterator
+from typing import List
+from typing import Optional
+from typing import Type
+
 import os.path  # pylint: disable-msg=W0404
+import hashlib
 import warnings
-from typing import Dict, List, Type, Iterator, Optional
+import errno
 from os.path import join as pjoin
 
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import b
+
 import libcloud.utils.files
-from libcloud.utils.py3 import b, httplib
-from libcloud.common.base import BaseDriver, Connection, ConnectionUserAndKey
 from libcloud.common.types import LibcloudError
+from libcloud.common.base import Connection
+from libcloud.common.base import ConnectionUserAndKey, BaseDriver
 from libcloud.storage.types import ObjectDoesNotExistError
 
 __all__ = ["Object", "Container", "StorageDriver", "CHUNK_SIZE", "DEFAULT_CONTENT_TYPE"]
@@ -41,7 +50,7 @@ CHUNK_SIZE = 8096
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 
-class Object:
+class Object(object):
     """
     Represents an object (BLOB).
     """
@@ -95,7 +104,9 @@ class Object:
         # type: () -> bool
         return self.driver.enable_object_cdn(obj=self)
 
-    def download(self, destination_path, overwrite_existing=False, delete_on_failure=True):
+    def download(
+        self, destination_path, overwrite_existing=False, delete_on_failure=True
+    ):
         # type: (str, bool, bool) -> bool
         return self.driver.download_object(
             obj=self,
@@ -140,7 +151,7 @@ class Object:
         return self.driver.delete_object(self)
 
     def __repr__(self):
-        return "<Object: name={}, size={}, hash={}, provider={} ...>".format(
+        return "<Object: name=%s, size=%s, hash=%s, provider=%s ...>" % (
             self.name,
             self.size,
             self.hash,
@@ -148,7 +159,7 @@ class Object:
         )
 
 
-class Container:
+class Container(object):
     """
     Represents a container (bucket) which can hold multiple objects.
     """
@@ -198,7 +209,9 @@ class Container:
         # type: (str) -> Object
         return self.driver.get_object(container_name=self.name, object_name=object_name)
 
-    def upload_object(self, file_path, object_name, extra=None, verify_hash=True, headers=None):
+    def upload_object(
+        self, file_path, object_name, extra=None, verify_hash=True, headers=None
+    ):
         # type: (str, str, Optional[dict], bool, Optional[Dict[str, str]]) -> Object  # noqa: E501
         return self.driver.upload_object(
             file_path,
@@ -249,7 +262,9 @@ class Container:
             delete_on_failure=delete_on_failure,
         )
 
-    def download_object_range_as_stream(self, obj, start_bytes, end_bytes=None, chunk_size=None):
+    def download_object_range_as_stream(
+        self, obj, start_bytes, end_bytes=None, chunk_size=None
+    ):
         # type: (Object, int, Optional[int], Optional[int]) -> Iterator[bytes]
         return self.driver.download_object_range_as_stream(
             obj=obj, start_bytes=start_bytes, end_bytes=end_bytes, chunk_size=chunk_size
@@ -264,7 +279,7 @@ class Container:
         return self.driver.delete_container(self)
 
     def __repr__(self):
-        return "<Container: name={}, provider={}>".format(self.name, self.driver.name)
+        return "<Container: name=%s, provider=%s>" % (self.name, self.driver.name)
 
 
 class StorageDriver(BaseDriver):
@@ -318,7 +333,9 @@ class StorageDriver(BaseDriver):
         :return: A iterator of Object instances.
         :rtype: ``iterator`` of :class:`libcloud.storage.base.Object`
         """
-        raise NotImplementedError("iterate_container_objects not implemented for this driver")
+        raise NotImplementedError(
+            "iterate_container_objects not implemented for this driver"
+        )
 
     def list_container_objects(self, container, prefix=None, ex_prefix=None):
         # type: (Container, Optional[str], Optional[str]) -> List[Object]
@@ -337,7 +354,11 @@ class StorageDriver(BaseDriver):
         :return: A list of Object instances.
         :rtype: ``list`` of :class:`libcloud.storage.base.Object`
         """
-        return list(self.iterate_container_objects(container, prefix=prefix, ex_prefix=ex_prefix))
+        return list(
+            self.iterate_container_objects(
+                container, prefix=prefix, ex_prefix=ex_prefix
+            )
+        )
 
     def _normalize_prefix_argument(self, prefix, ex_prefix):
         if ex_prefix:
@@ -386,7 +407,9 @@ class StorageDriver(BaseDriver):
         :return: A CDN URL for this container.
         :rtype: ``str``
         """
-        raise NotImplementedError("get_container_cdn_url not implemented for this driver")
+        raise NotImplementedError(
+            "get_container_cdn_url not implemented for this driver"
+        )
 
     def get_object(self, container_name, object_name):
         # type: (str, str) -> Object
@@ -427,7 +450,9 @@ class StorageDriver(BaseDriver):
 
         :rtype: ``bool``
         """
-        raise NotImplementedError("enable_container_cdn not implemented for this driver")
+        raise NotImplementedError(
+            "enable_container_cdn not implemented for this driver"
+        )
 
     def enable_object_cdn(self, obj):
         # type: (Object) -> bool
@@ -483,7 +508,9 @@ class StorageDriver(BaseDriver):
 
         :rtype: ``iterator`` of ``bytes``
         """
-        raise NotImplementedError("download_object_as_stream not implemented for this driver")
+        raise NotImplementedError(
+            "download_object_as_stream not implemented for this driver"
+        )
 
     def download_object_range(
         self,
@@ -529,9 +556,13 @@ class StorageDriver(BaseDriver):
         :rtype: ``bool``
 
         """
-        raise NotImplementedError("download_object_range not implemented for this driver")
+        raise NotImplementedError(
+            "download_object_range not implemented for this driver"
+        )
 
-    def download_object_range_as_stream(self, obj, start_bytes, end_bytes=None, chunk_size=None):
+    def download_object_range_as_stream(
+        self, obj, start_bytes, end_bytes=None, chunk_size=None
+    ):
         # type: (Object, int, Optional[int], Optional[int]) -> Iterator[bytes]
         """
         Return a iterator which yields range / part of the object data.
@@ -554,7 +585,9 @@ class StorageDriver(BaseDriver):
 
         :rtype: ``iterator`` of ``bytes``
         """
-        raise NotImplementedError("download_object_range_as_stream not implemented for this driver")
+        raise NotImplementedError(
+            "download_object_range_as_stream not implemented for this driver"
+        )
 
     def upload_object(
         self,
@@ -593,7 +626,9 @@ class StorageDriver(BaseDriver):
         """
         raise NotImplementedError("upload_object not implemented for this driver")
 
-    def upload_object_via_stream(self, iterator, container, object_name, extra=None, headers=None):
+    def upload_object_via_stream(
+        self, iterator, container, object_name, extra=None, headers=None
+    ):
         # type: (Iterator[bytes], Container, str, Optional[dict], Optional[Dict[str, str]]) -> Object  # noqa: E501
         """
         Upload an object using an iterator.
@@ -633,7 +668,9 @@ class StorageDriver(BaseDriver):
 
         :rtype: ``libcloud.storage.base.Object``
         """
-        raise NotImplementedError("upload_object_via_stream not implemented for this driver")
+        raise NotImplementedError(
+            "upload_object_via_stream not implemented for this driver"
+        )
 
     def delete_object(self, obj):
         # type: (Object) -> bool
@@ -674,7 +711,9 @@ class StorageDriver(BaseDriver):
         """
         raise NotImplementedError("delete_container not implemented for this driver")
 
-    def _get_object(self, obj, callback, callback_kwargs, response, success_status_code=None):
+    def _get_object(
+        self, obj, callback, callback_kwargs, response, success_status_code=None
+    ):
         """
         Call passed callback and start transfer of the object'
 
@@ -711,7 +750,9 @@ class StorageDriver(BaseDriver):
         elif response.status == httplib.NOT_FOUND:
             raise ObjectDoesNotExistError(object_name=obj.name, value="", driver=self)
 
-        raise LibcloudError(value="Unexpected status code: %s" % (response.status), driver=self)
+        raise LibcloudError(
+            value="Unexpected status code: %s" % (response.status), driver=self
+        )
 
     def _save_object(
         self,
@@ -760,7 +801,9 @@ class StorageDriver(BaseDriver):
         base_name = os.path.basename(destination_path)
 
         if not base_name and not os.path.exists(destination_path):
-            raise LibcloudError(value="Path %s does not exist" % (destination_path), driver=self)
+            raise LibcloudError(
+                value="Path %s does not exist" % (destination_path), driver=self
+            )
 
         if not base_name:
             file_path = pjoin(destination_path, obj.name)
@@ -769,7 +812,8 @@ class StorageDriver(BaseDriver):
 
         if os.path.exists(file_path) and not overwrite_existing:
             raise LibcloudError(
-                value="File %s already exists, but " % (file_path) + "overwrite_existing=False",
+                value="File %s already exists, but " % (file_path)
+                + "overwrite_existing=False",
                 driver=self,
             )
 
@@ -815,7 +859,11 @@ class StorageDriver(BaseDriver):
         if file_path and not os.path.exists(file_path):
             raise OSError("File %s does not exist" % (file_path))
 
-        if stream is not None and not hasattr(stream, "next") and not hasattr(stream, "__next__"):
+        if (
+            stream is not None
+            and not hasattr(stream, "next")
+            and not hasattr(stream, "__next__")
+        ):
             raise AttributeError("iterator object must implement next() " + "method.")
 
         headers["Content-Type"] = self._determine_content_type(
@@ -919,7 +967,9 @@ class StorageDriver(BaseDriver):
         try:
             func = getattr(hashlib, self.hash_type)()
         except AttributeError:
-            raise RuntimeError("Invalid or unsupported hash type: %s" % (self.hash_type))
+            raise RuntimeError(
+                "Invalid or unsupported hash type: %s" % (self.hash_type)
+            )
 
         return func
 
@@ -937,12 +987,15 @@ class StorageDriver(BaseDriver):
                 raise ValueError("start_bytes must be smaller than end_bytes")
             elif start_bytes == end_bytes:
                 raise ValueError(
-                    "start_bytes and end_bytes can't be the " "same. end_bytes is non-inclusive"
+                    "start_bytes and end_bytes can't be the "
+                    "same. end_bytes is non-inclusive"
                 )
 
         return True
 
-    def _get_standard_range_str(self, start_bytes, end_bytes=None, end_bytes_inclusive=False):
+    def _get_standard_range_str(
+        self, start_bytes, end_bytes=None, end_bytes_inclusive=False
+    ):
         # type: (int, Optional[int], bool) -> str
         """
         Return range string which is used as a Range header value for range

@@ -65,33 +65,36 @@ Setting up Installed Application authentication:
 Please remember to secure your keys and access tokens.
 """
 
+from __future__ import with_statement
 
-import os
-import sys
-import time
-import errno
-import base64
-import logging
-import datetime
 from typing import Optional
-
-from libcloud.utils.py3 import b, httplib, urlparse, urlencode
-from libcloud.common.base import BaseDriver, JsonResponse, PollingConnection, ConnectionUserAndKey
-from libcloud.common.types import LibcloudError, ProviderError
-from libcloud.utils.connection import get_response_object
 
 try:
     import simplejson as json
 except ImportError:
     import json  # type: ignore
 
+import logging
+import base64
+import errno
+import time
+import datetime
+import os
+import socket
+import sys
+
+from libcloud.utils.connection import get_response_object
+from libcloud.utils.py3 import b, httplib, urlencode, urlparse, PY3
+from libcloud.common.base import ConnectionUserAndKey, JsonResponse, PollingConnection
+from libcloud.common.base import BaseDriver
+from libcloud.common.types import ProviderError, LibcloudError
 
 try:
-    from cryptography import exceptions
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.hashes import SHA256
     from cryptography.hazmat.primitives.asymmetric.padding import PKCS1v15
+    from cryptography import exceptions
 except ImportError:
     # The cryptography library is unavailable
     SHA256 = None  # type: ignore
@@ -145,7 +148,7 @@ class GoogleAuthError(LibcloudError):
 class GoogleBaseError(ProviderError):
     def __init__(self, value, http_code, code, driver=None):
         self.code = code
-        super().__init__(value, http_code, driver)
+        super(GoogleBaseError, self).__init__(value, http_code, driver)
 
 
 class InvalidRequestError(GoogleBaseError):
@@ -171,7 +174,7 @@ class ResourceNotFoundError(GoogleBaseError):
                 "Please  ensure your auth credentials match "
                 "your project. "
             )
-        super().__init__(value, http_code, driver)
+        super(ResourceNotFoundError, self).__init__(value, http_code, driver)
 
 
 class QuotaExceededError(GoogleBaseError):
@@ -353,7 +356,7 @@ class GoogleBaseAuthConnection(ConnectionUserAndKey):
         self.redirect_uri = redirect_uri
         self.login_hint = login_hint
 
-        super().__init__(user_id, key, **kwargs)
+        super(GoogleBaseAuthConnection, self).__init__(user_id, key, **kwargs)
 
     def add_default_headers(self, headers):
         """
@@ -379,11 +382,14 @@ class GoogleBaseAuthConnection(ConnectionUserAndKey):
             response = self.request("/o/oauth2/token", method="POST", data=data)
         except AttributeError:
             raise GoogleAuthError(
-                "Invalid authorization response, please " "check your credentials and time drift."
+                "Invalid authorization response, please "
+                "check your credentials and time drift."
             )
         token_info = response.object
         if "expires_in" in token_info:
-            expire_time = _utcnow() + datetime.timedelta(seconds=token_info["expires_in"])
+            expire_time = _utcnow() + datetime.timedelta(
+                seconds=token_info["expires_in"]
+            )
             token_info["expire_time"] = _utc_timestamp(expire_time)
         return token_info
 
@@ -429,10 +435,13 @@ class GoogleInstalledAppAuthConnection(GoogleBaseAuthConnection):
 
         data = urlencode(auth_params)
 
-        url = "https://{}{}?{}".format(self.host, self.auth_path, data)
+        url = "https://%s%s?%s" % (self.host, self.auth_path, data)
         print("\nPlease Go to the following URL and sign in:")
         print(url)
-        code = input("Enter Code: ")
+        if PY3:
+            code = input("Enter Code: ")
+        else:
+            code = raw_input("Enter Code: ")  # NOQA pylint: disable=undefined-variable
         return code
 
     def get_new_token(self):
@@ -513,10 +522,12 @@ class GoogleServiceAcctAuthConnection(GoogleBaseAuthConnection):
             if os.path.exists(key_path) and os.path.isfile(key_path):
                 # Assume it's a file and read it
                 try:
-                    with open(key_path) as f:
+                    with open(key_path, "r") as f:
                         key_content = f.read()
-                except OSError:
-                    raise GoogleAuthError("Missing (or unreadable) key " "file: '%s'" % key)
+                except IOError:
+                    raise GoogleAuthError(
+                        "Missing (or unreadable) key " "file: '%s'" % key
+                    )
             else:
                 # assume it's a PEM str or serialized JSON str
                 key_content = key
@@ -539,7 +550,9 @@ class GoogleServiceAcctAuthConnection(GoogleBaseAuthConnection):
 
         try:
             # check if the key is actually a PEM encoded private key
-            serialization.load_pem_private_key(b(key), password=None, backend=default_backend())
+            serialization.load_pem_private_key(
+                b(key), password=None, backend=default_backend()
+            )
         except ValueError as e:
             raise GoogleAuthError("Unable to decode provided PEM key: %s" % e)
         except TypeError as e:
@@ -547,7 +560,9 @@ class GoogleServiceAcctAuthConnection(GoogleBaseAuthConnection):
         except exceptions.UnsupportedAlgorithm as e:
             raise GoogleAuthError("Unable to decode provided PEM key: %s" % e)
 
-        super().__init__(user_id, key, *args, **kwargs)
+        super(GoogleServiceAcctAuthConnection, self).__init__(
+            user_id, key, *args, **kwargs
+        )
 
     def get_new_token(self):
         """
@@ -604,17 +619,23 @@ class GoogleGCEServiceAcctAuthConnection(GoogleBaseAuthConnection):
         path = "/instance/service-accounts/default/token"
         http_code, http_reason, token_info = _get_gce_metadata(path)
         if http_code == httplib.NOT_FOUND:
-            raise ValueError("Service Accounts are not enabled for this " "GCE instance.")
+            raise ValueError(
+                "Service Accounts are not enabled for this " "GCE instance."
+            )
         if http_code != httplib.OK:
-            raise ValueError("Internal GCE Authorization failed: " "'%s'" % str(http_reason))
+            raise ValueError(
+                "Internal GCE Authorization failed: " "'%s'" % str(http_reason)
+            )
         token_info = json.loads(token_info)
         if "expires_in" in token_info:
-            expire_time = _utcnow() + datetime.timedelta(seconds=token_info["expires_in"])
+            expire_time = _utcnow() + datetime.timedelta(
+                seconds=token_info["expires_in"]
+            )
             token_info["expire_time"] = _utc_timestamp(expire_time)
         return token_info
 
 
-class GoogleAuthType:
+class GoogleAuthType(object):
     """
     SA (Service Account),
     IA (Installed Application),
@@ -682,15 +703,19 @@ class GoogleAuthType:
         return user_id.endswith(".gserviceaccount.com")
 
 
-class GoogleOAuth2Credential:
+class GoogleOAuth2Credential(object):
     default_credential_file = "~/.google_libcloud_auth"
 
-    def __init__(self, user_id, key, auth_type=None, credential_file=None, scopes=None, **kwargs):
+    def __init__(
+        self, user_id, key, auth_type=None, credential_file=None, scopes=None, **kwargs
+    ):
         self.auth_type = auth_type or GoogleAuthType.guess_type(user_id)
         if self.auth_type not in GoogleAuthType.ALL_TYPES:
             raise GoogleAuthError("Invalid auth type: %s" % self.auth_type)
         if not GoogleAuthType.is_oauth2(self.auth_type):
-            raise GoogleAuthError("Auth type %s cannot be used with OAuth2" % self.auth_type)
+            raise GoogleAuthError(
+                ("Auth type %s cannot be used with OAuth2" % self.auth_type)
+            )
         self.user_id = user_id
         self.key = key
 
@@ -750,13 +775,15 @@ class GoogleOAuth2Credential:
         filename = os.path.realpath(os.path.expanduser(self.credential_file))
 
         try:
-            with open(filename) as f:
+            with open(filename, "r") as f:
                 data = f.read()
             token = json.loads(data)
-        except (OSError, ValueError) as e:
+        except (IOError, ValueError) as e:
             # Note: File related errors (IOError) and errors related to json
             # parsing of the data (ValueError) are not fatal.
-            LOG.info('Failed to read cached auth token from file "%s": %s', filename, str(e))
+            LOG.info(
+                'Failed to read cached auth token from file "%s": %s', filename, str(e)
+            )
 
         return token
 
@@ -826,18 +853,18 @@ class GoogleBaseConnection(ConnectionUserAndKey, PollingConnection):
                           read/write access to Compute, Storage, and DNS.
         :type     scopes: ``list``
         """
-        super().__init__(user_id, key, **kwargs)
+        super(GoogleBaseConnection, self).__init__(user_id, key, **kwargs)
 
         self.oauth2_credential = GoogleOAuth2Credential(
             user_id, key, auth_type, credential_file, scopes, **kwargs
         )
 
-        python_ver = "{}.{}.{}".format(
+        python_ver = "%s.%s.%s" % (
             sys.version_info[0],
             sys.version_info[1],
             sys.version_info[2],
         )
-        ver_platform = "Python {}/{}".format(python_ver, sys.platform)
+        ver_platform = "Python %s/%s" % (python_ver, sys.platform)
         self.user_agent_append(ver_platform)
 
     def add_default_headers(self, headers):
@@ -872,14 +899,14 @@ class GoogleBaseConnection(ConnectionUserAndKey, PollingConnection):
         tries = 0
         while tries < (retries - 1):
             try:
-                return super().request(*args, **kwargs)
-            except OSError as e:
+                return super(GoogleBaseConnection, self).request(*args, **kwargs)
+            except socket.error as e:
                 if e.errno == errno.ECONNRESET:
                     tries = tries + 1
                 else:
                     raise e
         # One more time, then give up.
-        return super().request(*args, **kwargs)
+        return super(GoogleBaseConnection, self).request(*args, **kwargs)
 
     def has_completed(self, response):
         """

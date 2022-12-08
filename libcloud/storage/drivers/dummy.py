@@ -13,20 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os.path
 import random
 import hashlib
-import os.path
-from io import FileIO as file
 
+from libcloud.utils.py3 import PY3
 from libcloud.utils.py3 import b
+
+if PY3:
+    from io import FileIO as file
+
 from libcloud.common.types import LibcloudError
+
 from libcloud.storage.base import Object, Container, StorageDriver
-from libcloud.storage.types import (
-    ObjectDoesNotExistError,
-    ContainerIsNotEmptyError,
-    ContainerDoesNotExistError,
-    ContainerAlreadyExistsError,
-)
+from libcloud.storage.types import ContainerAlreadyExistsError
+from libcloud.storage.types import ContainerDoesNotExistError
+from libcloud.storage.types import ContainerIsNotEmptyError
+from libcloud.storage.types import ObjectDoesNotExistError
 
 
 class DummyFileObject(file):
@@ -49,7 +52,7 @@ class DummyFileObject(file):
         return self._yield_count * self._chunk_len
 
 
-class DummyIterator:
+class DummyIterator(object):
     def __init__(self, data=None):
         self.hash = hashlib.md5()
         self._data = data or []
@@ -133,7 +136,10 @@ class DummyStorageDriver(StorageDriver):
 
         container_count = len(self._containers)
         object_count = sum(
-            len(self._containers[container]["objects"]) for container in self._containers
+            [
+                len(self._containers[container]["objects"])
+                for container in self._containers
+            ]
         )
 
         bytes_used = 0
@@ -204,7 +210,9 @@ class DummyStorageDriver(StorageDriver):
         """
 
         if container_name not in self._containers:
-            raise ContainerDoesNotExistError(driver=self, value=None, container_name=container_name)
+            raise ContainerDoesNotExistError(
+                driver=self, value=None, container_name=container_name
+            )
 
         return self._containers[container_name]["container"]
 
@@ -227,7 +235,9 @@ class DummyStorageDriver(StorageDriver):
         """
 
         if container.name not in self._containers:
-            raise ContainerDoesNotExistError(driver=self, value=None, container_name=container.name)
+            raise ContainerDoesNotExistError(
+                driver=self, value=None, container_name=container.name
+            )
 
         return self._containers[container.name]["cdn_url"]
 
@@ -259,7 +269,9 @@ class DummyStorageDriver(StorageDriver):
         self.get_container(container_name)
         container_objects = self._containers[container_name]["objects"]
         if object_name not in container_objects:
-            raise ObjectDoesNotExistError(object_name=object_name, value=None, driver=self)
+            raise ObjectDoesNotExistError(
+                object_name=object_name, value=None, driver=self
+            )
 
         return container_objects[object_name]
 
@@ -315,7 +327,8 @@ class DummyStorageDriver(StorageDriver):
         self._containers[container_name] = {
             "container": container,
             "objects": {},
-            "cdn_url": "http://www.test.com/container/%s" % (container_name.replace(" ", "_")),
+            "cdn_url": "http://www.test.com/container/%s"
+            % (container_name.replace(" ", "_")),
         }
         return container
 
@@ -353,11 +366,15 @@ class DummyStorageDriver(StorageDriver):
 
         container_name = container.name
         if container_name not in self._containers:
-            raise ContainerDoesNotExistError(container_name=container_name, value=None, driver=self)
+            raise ContainerDoesNotExistError(
+                container_name=container_name, value=None, driver=self
+            )
 
         container = self._containers[container_name]
         if len(container["objects"]) > 0:
-            raise ContainerIsNotEmptyError(container_name=container_name, value=None, driver=self)
+            raise ContainerIsNotEmptyError(
+                container_name=container_name, value=None, driver=self
+            )
 
         del self._containers[container_name]
         return True
@@ -422,14 +439,18 @@ class DummyStorageDriver(StorageDriver):
         """
 
         if not os.path.exists(file_path):
-            raise LibcloudError(value="File %s does not exist" % (file_path), driver=self)
+            raise LibcloudError(
+                value="File %s does not exist" % (file_path), driver=self
+            )
 
         size = os.path.getsize(file_path)
         return self._add_object(
             container=container, object_name=object_name, size=size, extra=extra
         )
 
-    def upload_object_via_stream(self, iterator, container, object_name, extra=None, headers=None):
+    def upload_object_via_stream(
+        self, iterator, container, object_name, extra=None, headers=None
+    ):
         """
         >>> driver = DummyStorageDriver('key', 'secret')
         >>> container = driver.create_container(
@@ -484,7 +505,10 @@ class DummyStorageDriver(StorageDriver):
         extra = extra or {}
         meta_data = extra.get("meta_data", {})
         meta_data.update(
-            {"cdn_url": "http://www.test.com/object/%s" % (object_name.replace(" ", "_"))}
+            {
+                "cdn_url": "http://www.test.com/object/%s"
+                % (object_name.replace(" ", "_"))
+            }
         )
         obj = Object(
             name=object_name,

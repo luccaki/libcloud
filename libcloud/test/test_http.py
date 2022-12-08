@@ -15,20 +15,26 @@
 
 import os
 import sys
-import time
-import random
 import os.path
+import random
 import platform
 import warnings
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import time
+
+from http.server import BaseHTTPRequestHandler
+from http.server import HTTPServer
 
 import requests
 
 import libcloud.security
+
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import reload
+from libcloud.utils.py3 import assertRaisesRegex
 from libcloud.http import LibcloudConnection
+
 from libcloud.test import unittest, no_network
-from libcloud.utils.py3 import reload, httplib, assertRaisesRegex
 
 ORIGINAL_CA_CERTS_PATH = libcloud.security.CA_CERTS_PATH
 
@@ -164,7 +170,9 @@ class HttpLayerTestCase(unittest.TestCase):
 
         hooks = {"response": response_hook}
 
-        connection = LibcloudConnection(host=self.listen_host, port=self.listen_port, timeout=5)
+        connection = LibcloudConnection(
+            host=self.listen_host, port=self.listen_port, timeout=5
+        )
         connection.request(method="GET", url="/test", hooks=hooks)
 
     @unittest.skipIf(no_network(), "Network is disabled")
@@ -175,7 +183,9 @@ class HttpLayerTestCase(unittest.TestCase):
 
         hooks = {"response": response_hook}
 
-        connection = LibcloudConnection(host=self.listen_host, port=self.listen_port, timeout=0.5)
+        connection = LibcloudConnection(
+            host=self.listen_host, port=self.listen_port, timeout=0.5
+        )
         self.assertRaisesRegex(
             requests.exceptions.ReadTimeout,
             "Read timed out",

@@ -16,18 +16,22 @@
 Brightbox Driver
 """
 
+from libcloud.utils.py3 import httplib
+from libcloud.utils.py3 import b
+
+from libcloud.common.brightbox import BrightboxConnection
+from libcloud.compute.types import Provider, NodeState
+from libcloud.compute.base import NodeDriver
+from libcloud.compute.base import Node, NodeImage, NodeSize, NodeLocation
+
 import base64
 
-from libcloud.utils.py3 import b, httplib
-from libcloud.compute.base import Node, NodeSize, NodeImage, NodeDriver, NodeLocation
-from libcloud.compute.types import Provider, NodeState
-from libcloud.common.brightbox import BrightboxConnection
 
 API_VERSION = "1.0"
 
 
 def _extract(d, keys):
-    return {k: d[k] for k in keys if k in d and d[k] is not None}
+    return dict((k, d[k]) for k in keys if k in d and d[k] is not None)
 
 
 class BrightboxNodeDriver(NodeDriver):
@@ -61,7 +65,7 @@ class BrightboxNodeDriver(NodeDriver):
         api_version=API_VERSION,
         **kwargs,
     ):
-        super().__init__(
+        super(BrightboxNodeDriver, self).__init__(
             key=key,
             secret=secret,
             secure=secure,
@@ -141,7 +145,9 @@ class BrightboxNodeDriver(NodeDriver):
         if data.get("ancestor", None):
             extra_data["ancestor"] = self._to_image(data["ancestor"])
 
-        return NodeImage(id=data["id"], name=data["name"], driver=self, extra=extra_data)
+        return NodeImage(
+            id=data["id"], name=data["name"], driver=self, extra=extra_data
+        )
 
     def _to_size(self, data):
         return NodeSize(
@@ -156,7 +162,9 @@ class BrightboxNodeDriver(NodeDriver):
 
     def _to_location(self, data):
         if data:
-            return NodeLocation(id=data["id"], name=data["handle"], country="GB", driver=self)
+            return NodeLocation(
+                id=data["id"], name=data["handle"], country="GB", driver=self
+            )
         else:
             return None
 
@@ -168,7 +176,9 @@ class BrightboxNodeDriver(NodeDriver):
         headers = {"Content-Type": "application/json"}
         return self.connection.request(path, data=data, headers=headers, method="PUT")
 
-    def create_node(self, name, size, image, location=None, ex_userdata=None, ex_servergroup=None):
+    def create_node(
+        self, name, size, image, location=None, ex_userdata=None, ex_servergroup=None
+    ):
         """Create a new Brightbox node
 
         Reference: https://api.gb1.brightbox.com/1.0/#server_create_server
@@ -204,7 +214,7 @@ class BrightboxNodeDriver(NodeDriver):
 
     def destroy_node(self, node):
         response = self.connection.request(
-            "/{}/servers/{}".format(self.api_version, node.id), method="DELETE"
+            "/%s/servers/%s" % (self.api_version, node.id), method="DELETE"
         )
         return response.status == httplib.ACCEPTED
 
@@ -267,7 +277,7 @@ class BrightboxNodeDriver(NodeDriver):
         :rtype: ``dict``
         """
         response = self._put(
-            "/{}/cloud_ips/{}".format(self.api_version, cloud_ip_id),
+            "/%s/cloud_ips/%s" % (self.api_version, cloud_ip_id),
             {"reverse_dns": reverse_dns},
         )
         return response.status == httplib.OK
@@ -290,7 +300,7 @@ class BrightboxNodeDriver(NodeDriver):
         :rtype: ``bool``
         """
         response = self._post(
-            "/{}/cloud_ips/{}/map".format(self.api_version, cloud_ip_id),
+            "/%s/cloud_ips/%s/map" % (self.api_version, cloud_ip_id),
             {"destination": interface_id},
         )
         return response.status == httplib.ACCEPTED
@@ -309,7 +319,9 @@ class BrightboxNodeDriver(NodeDriver):
         :return: True if the unmap was successful.
         :rtype: ``bool``
         """
-        response = self._post("/{}/cloud_ips/{}/unmap".format(self.api_version, cloud_ip_id))
+        response = self._post(
+            "/%s/cloud_ips/%s/unmap" % (self.api_version, cloud_ip_id)
+        )
         return response.status == httplib.ACCEPTED
 
     def ex_destroy_cloud_ip(self, cloud_ip_id):
@@ -325,6 +337,6 @@ class BrightboxNodeDriver(NodeDriver):
         :rtype: ``bool``
         """
         response = self.connection.request(
-            "/{}/cloud_ips/{}".format(self.api_version, cloud_ip_id), method="DELETE"
+            "/%s/cloud_ips/%s" % (self.api_version, cloud_ip_id), method="DELETE"
         )
         return response.status == httplib.OK

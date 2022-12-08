@@ -18,15 +18,13 @@ try:
 except ImportError:
     import json
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import (
-    Provider,
-    RecordType,
-    ZoneDoesNotExistError,
-    ZoneAlreadyExistsError,
-    RecordDoesNotExistError,
-)
-from libcloud.common.luadns import LuadnsResponse, LuadnsException, LuadnsConnection
+from libcloud.common.luadns import LuadnsResponse, LuadnsConnection
+from libcloud.common.luadns import LuadnsException
+from libcloud.dns.base import DNSDriver, Zone, Record
+from libcloud.dns.types import Provider, RecordType
+from libcloud.dns.types import ZoneDoesNotExistError, ZoneAlreadyExistsError
+from libcloud.dns.types import RecordDoesNotExistError
+
 
 __all__ = ["LuadnsDNSDriver"]
 
@@ -174,12 +172,14 @@ class LuadnsDNSDriver(DNSDriver):
         :rtype: :class:`Record`
         """
         zone = self.get_zone(zone_id=zone_id)
-        action = "/v1/zones/{}/records/{}".format(zone_id, record_id)
+        action = "/v1/zones/%s/records/%s" % (zone_id, record_id)
         try:
             response = self.connection.request(action=action)
         except LuadnsException as e:
             if e.message == "Record not found.":
-                raise RecordDoesNotExistError(record_id=record_id, driver=self, value="")
+                raise RecordDoesNotExistError(
+                    record_id=record_id, driver=self, value=""
+                )
             else:
                 raise e
 
@@ -196,12 +196,14 @@ class LuadnsDNSDriver(DNSDriver):
 
         :rtype: ``bool``
         """
-        action = "/v1/zones/{}/records/{}".format(record.zone.id, record.id)
+        action = "/v1/zones/%s/records/%s" % (record.zone.id, record.id)
         try:
             response = self.connection.request(action=action, method="DELETE")
         except LuadnsException as e:
             if e.message == "Record not found.":
-                raise RecordDoesNotExistError(record_id=record.id, driver=self, value="")
+                raise RecordDoesNotExistError(
+                    record_id=record.id, driver=self, value=""
+                )
             else:
                 raise e
 

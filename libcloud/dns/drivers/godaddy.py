@@ -19,11 +19,11 @@ try:
 except Exception:
     import json
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import Provider, RecordType, RecordDoesNotExistError
-from libcloud.utils.py3 import httplib
-from libcloud.common.base import JsonResponse, ConnectionKey
+from libcloud.common.base import ConnectionKey, JsonResponse
 from libcloud.common.types import LibcloudError
+from libcloud.utils.py3 import httplib
+from libcloud.dns.types import Provider, RecordType, RecordDoesNotExistError
+from libcloud.dns.base import DNSDriver, Zone, Record
 
 API_HOST = "api.godaddy.com"
 VALID_RECORD_EXTRA_PARAMS = ["prio", "ttl"]
@@ -39,7 +39,7 @@ class GoDaddyDNSException(LibcloudError):
         return self.__repr__()
 
     def __repr__(self):
-        return "<GoDaddyDNSException in {}: {}>".format(self.code, self.message)
+        return "<GoDaddyDNSException in %s: %s>" % (self.code, self.message)
 
 
 class GoDaddyDNSResponse(JsonResponse):
@@ -87,7 +87,7 @@ class GoDaddyDNSConnection(ConnectionKey):
         backoff=None,
         retry_delay=None,
     ):
-        super().__init__(
+        super(GoDaddyDNSConnection, self).__init__(
             key,
             secure=secure,
             host=host,
@@ -106,7 +106,7 @@ class GoDaddyDNSConnection(ConnectionKey):
         if self.shopper_id is not None:
             headers["X-Shopper-Id"] = self.shopper_id
         headers["Content-type"] = "application/json"
-        headers["Authorization"] = "sso-key {}:{}".format(self.key, self.secret)
+        headers["Authorization"] = "sso-key %s:%s" % (self.key, self.secret)
         return headers
 
 
@@ -148,7 +148,7 @@ class GoDaddyDNSDriver(DNSDriver):
         :type   secret: ``str``
         """
         self.shopper_id = shopper_id
-        super().__init__(
+        super(GoDaddyDNSDriver, self).__init__(
             key=key,
             secret=secret,
             secure=secure,
@@ -176,7 +176,9 @@ class GoDaddyDNSDriver(DNSDriver):
 
         :return: ``list`` of :class:`Record`
         """
-        result = self.connection.request("/v1/domains/%s/records" % (zone.domain)).object
+        result = self.connection.request(
+            "/v1/domains/%s/records" % (zone.domain)
+        ).object
         records = self._to_records(items=result, zone=zone)
         return records
 
@@ -248,7 +250,8 @@ class GoDaddyDNSDriver(DNSDriver):
         """
         new_record = self._format_record(name, type, data, extra)
         self.connection.request(
-            "/v1/domains/{}/records/{}/{}".format(record.zone.domain, record.type, record.name),
+            "/v1/domains/%s/records/%s/%s"
+            % (record.zone.domain, record.type, record.name),
             method="PUT",
             data=json.dumps([new_record]),
         )
@@ -278,7 +281,7 @@ class GoDaddyDNSDriver(DNSDriver):
         """
         parts = record_id.split(":")
         result = self.connection.request(
-            "/v1/domains/{}/records/{}/{}".format(zone_id, parts[1], parts[0])
+            "/v1/domains/%s/records/%s/%s" % (zone_id, parts[1], parts[0])
         ).object
         if len(result) == 0:
             raise RecordDoesNotExistError(record_id, driver=self, record_id=record_id)
@@ -486,13 +489,13 @@ class GoDaddyDNSDriver(DNSDriver):
         return GoDaddyTLD(name=item["name"], tld_type=item["type"])
 
     def _get_id_of_record(self, name, type):
-        return "{}:{}".format(name, type)
+        return "%s:%s" % (name, type)
 
     def _ex_connection_class_kwargs(self):
         return {"shopper_id": self.shopper_id}
 
 
-class GoDaddyAvailability:
+class GoDaddyAvailability(object):
     def __init__(self, domain, available, price, currency, period):
         self.domain = domain
         self.available = bool(available)
@@ -502,13 +505,13 @@ class GoDaddyAvailability:
         self.period = int(period)
 
 
-class GoDaddyTLD:
+class GoDaddyTLD(object):
     def __init__(self, name, tld_type):
         self.name = name
         self.type = tld_type
 
 
-class GoDaddyDomainPurchaseResponse:
+class GoDaddyDomainPurchaseResponse(object):
     def __init__(self, order_id, item_count, total, currency):
         self.order_id = order_id
         self.item_count = item_count
@@ -516,7 +519,7 @@ class GoDaddyDomainPurchaseResponse:
         self.current = currency
 
 
-class GoDaddyLegalAgreement:
+class GoDaddyLegalAgreement(object):
     def __init__(self, agreement_key, title, url, content):
         self.agreement_key = agreement_key
         self.title = title

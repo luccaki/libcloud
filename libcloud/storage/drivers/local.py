@@ -17,41 +17,42 @@
 Provides storage driver for working with local filesystem
 """
 
+from __future__ import with_statement
 
+import errno
 import os
 import time
-import errno
 import shutil
 import tempfile
 import threading
 from hashlib import sha256
 
-from libcloud.utils.py3 import u, relpath
-from libcloud.common.base import Connection
-from libcloud.utils.files import read_in_chunks, exhaust_iterator
-from libcloud.common.types import LibcloudError
-from libcloud.storage.base import Object, Container, StorageDriver
-from libcloud.storage.types import (
-    ObjectError,
-    ObjectDoesNotExistError,
-    ContainerIsNotEmptyError,
-    InvalidContainerNameError,
-    ContainerDoesNotExistError,
-    ContainerAlreadyExistsError,
-)
-
 try:
     import fasteners
 except ImportError:
     raise ImportError(
-        "Missing fasteners dependency, you can install it " "using pip: pip install fasteners"
+        "Missing fasteners dependency, you can install it "
+        "using pip: pip install fasteners"
     )
 
+from libcloud.utils.files import read_in_chunks
+from libcloud.utils.files import exhaust_iterator
+from libcloud.utils.py3 import relpath
+from libcloud.utils.py3 import u
+from libcloud.common.base import Connection
+from libcloud.storage.base import Object, Container, StorageDriver
+from libcloud.common.types import LibcloudError
+from libcloud.storage.types import ContainerAlreadyExistsError
+from libcloud.storage.types import ContainerDoesNotExistError
+from libcloud.storage.types import ContainerIsNotEmptyError
+from libcloud.storage.types import ObjectError
+from libcloud.storage.types import ObjectDoesNotExistError
+from libcloud.storage.types import InvalidContainerNameError
 
 IGNORE_FOLDERS = [".lock", ".hash"]
 
 
-class NoOpLockLocalStorage:
+class NoOpLockLocalStorage(object):
     def __init__(self, path, timeout=5):
         self.path = path
         self.lock_acquire_timeout = timeout
@@ -63,7 +64,7 @@ class NoOpLockLocalStorage:
         return value
 
 
-class LockLocalStorage:
+class LockLocalStorage(object):
     """
     A class which locks a local path which is being updated. To correctly handle all the scenarios
     use a thread based and IPC based lock.
@@ -164,7 +165,9 @@ class LocalStorageDriver(StorageDriver):
         else:
             self._lock_cls = NoOpLockLocalStorage
 
-        super().__init__(key=key, secret=secret, secure=secure, host=host, port=port, **kwargs)
+        super(LocalStorageDriver, self).__init__(
+            key=key, secret=secret, secure=secure, host=host, port=port, **kwargs
+        )
 
     def _make_path(self, path, ignore_existing=True):
         """
@@ -186,7 +189,9 @@ class LocalStorageDriver(StorageDriver):
         """
 
         if "/" in container_name or "\\" in container_name:
-            raise InvalidContainerNameError(value=None, driver=self, container_name=container_name)
+            raise InvalidContainerNameError(
+                value=None, driver=self, container_name=container_name
+            )
 
     def _make_container(self, container_name):
         """
@@ -208,7 +213,9 @@ class LocalStorageDriver(StorageDriver):
             if not os.path.isdir(full_path):
                 raise OSError("Target path is not a directory")
         except OSError:
-            raise ContainerDoesNotExistError(value=None, driver=self, container_name=container_name)
+            raise ContainerDoesNotExistError(
+                value=None, driver=self, container_name=container_name
+            )
 
         extra = {}
         extra["creation_time"] = stat.st_ctime
@@ -239,7 +246,9 @@ class LocalStorageDriver(StorageDriver):
         try:
             stat = os.stat(full_path)
         except Exception:
-            raise ObjectDoesNotExistError(value=None, driver=self, object_name=object_name)
+            raise ObjectDoesNotExistError(
+                value=None, driver=self, object_name=object_name
+            )
 
         # Make a hash for the file based on the metadata. We can safely
         # use only the mtime attribute here. If the file contents change,
@@ -346,7 +355,9 @@ class LocalStorageDriver(StorageDriver):
         path = os.path.join(self.base_path, container.name)
 
         if check and not os.path.isdir(path):
-            raise ContainerDoesNotExistError(value=None, driver=self, container_name=container.name)
+            raise ContainerDoesNotExistError(
+                value=None, driver=self, container_name=container.name
+            )
 
         return path
 
@@ -452,7 +463,7 @@ class LocalStorageDriver(StorageDriver):
 
         try:
             shutil.copy(obj_path, file_path)
-        except OSError:
+        except IOError:
             if delete_on_failure:
                 try:
                     os.unlink(file_path)
@@ -477,7 +488,8 @@ class LocalStorageDriver(StorageDriver):
         """
         path = self.get_object_cdn_url(obj)
         with open(path, "rb") as obj_file:
-            yield from read_in_chunks(obj_file, chunk_size=chunk_size)
+            for data in read_in_chunks(obj_file, chunk_size=chunk_size):
+                yield data
 
     def download_object_range(
         self,
@@ -505,7 +517,9 @@ class LocalStorageDriver(StorageDriver):
 
         return True
 
-    def download_object_range_as_stream(self, obj, start_bytes, end_bytes=None, chunk_size=None):
+    def download_object_range_as_stream(
+        self, obj, start_bytes, end_bytes=None, chunk_size=None
+    ):
         self._validate_start_and_end_bytes(start_bytes=start_bytes, end_bytes=end_bytes)
 
         path = self.get_object_cdn_url(obj)
@@ -570,7 +584,9 @@ class LocalStorageDriver(StorageDriver):
 
         return self._make_object(container, object_name)
 
-    def upload_object_via_stream(self, iterator, container, object_name, extra=None, headers=None):
+    def upload_object_via_stream(
+        self, iterator, container, object_name, extra=None, headers=None
+    ):
         """
         Upload an object using an iterator.
 
@@ -681,9 +697,13 @@ class LocalStorageDriver(StorageDriver):
                     driver=self,
                 )
             else:
-                raise LibcloudError("Error creating container %s" % container_name, driver=self)
+                raise LibcloudError(
+                    "Error creating container %s" % container_name, driver=self
+                )
         except Exception:
-            raise LibcloudError("Error creating container %s" % container_name, driver=self)
+            raise LibcloudError(
+                "Error creating container %s" % container_name, driver=self
+            )
 
         return self._make_container(container_name)
 
@@ -721,7 +741,9 @@ class LocalStorageDriver(StorageDriver):
         base_name = os.path.basename(destination_path)
 
         if not base_name and not os.path.exists(destination_path):
-            raise LibcloudError(value="Path %s does not exist" % (destination_path), driver=self)
+            raise LibcloudError(
+                value="Path %s does not exist" % (destination_path), driver=self
+            )
 
         if not base_name:
             file_path = os.path.join(destination_path, obj.name)
@@ -730,7 +752,8 @@ class LocalStorageDriver(StorageDriver):
 
         if os.path.exists(file_path) and not overwrite_existing:
             raise LibcloudError(
-                value="File %s already exists, but " % (file_path) + "overwrite_existing=False",
+                value="File %s already exists, but " % (file_path)
+                + "overwrite_existing=False",
                 driver=self,
             )
 

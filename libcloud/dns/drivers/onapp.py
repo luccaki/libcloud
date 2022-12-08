@@ -20,9 +20,10 @@ __all__ = ["OnAppDNSDriver"]
 
 import json
 
-from libcloud.dns.base import Zone, Record, DNSDriver
-from libcloud.dns.types import Provider, RecordType
 from libcloud.common.onapp import OnAppConnection
+from libcloud.dns.types import Provider, RecordType
+from libcloud.dns.base import DNSDriver, Zone, Record
+
 
 DEFAULT_ZONE_TTL = 1200
 
@@ -144,7 +145,7 @@ class OnAppDNSDriver(DNSDriver):
         :rtype: :class:`Record`
         """
         response = self.connection.request(
-            "/dns_zones/{}/records/{}.json".format(zone_id, record_id)
+            "/dns_zones/%s/records/%s.json" % (zone_id, record_id)
         )
         record = self._to_record(response.object, zone_id=zone_id)
         return record
@@ -220,7 +221,7 @@ class OnAppDNSDriver(DNSDriver):
         dns_record = self._format_record(name, type, data, extra)
         dns_record_data = json.dumps({"dns_record": dns_record})
         self.connection.request(
-            "/dns_zones/{}/records/{}.json".format(zone.id, record.id),
+            "/dns_zones/%s/records/%s.json" % (zone.id, record.id),
             method="PUT",
             headers={"Content-type": "application/json"},
             data=dns_record_data,
@@ -242,7 +243,7 @@ class OnAppDNSDriver(DNSDriver):
         """
         zone_id = record.zone.id
         self.connection.request(
-            "/dns_zones/{}/records/{}.json".format(zone_id, record.id), method="DELETE"
+            "/dns_zones/%s/records/%s.json" % (zone_id, record.id), method="DELETE"
         )
         return True
 

@@ -20,6 +20,7 @@ ElasticHosts Driver
 from libcloud.compute.types import Provider
 from libcloud.compute.drivers.elasticstack import ElasticStackBaseNodeDriver
 
+
 # API end-points
 API_ENDPOINTS = {
     "lon-p": {
@@ -166,7 +167,7 @@ class ElasticHostsNodeDriver(ElasticStackBaseNodeDriver):
             raise ValueError("Invalid region: %s" % (region))
 
         self._host_argument_set = host is not None
-        super().__init__(
+        super(ElasticHostsNodeDriver, self).__init__(
             key=key,
             secret=secret,
             secure=secure,
