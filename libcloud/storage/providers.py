@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 DRIVERS = {
     Provider.DUMMY: ("libcloud.storage.drivers.dummy", "DummyStorageDriver"),
     Provider.IPFS: ("libcloud.storage.drivers.ipfs", "IpfsStorageDriver"),
+    Provider.GOOGLE_DRIVE: ("libcloud.storage.drivers.google_drive", "GoogleDriveStorageDriver"),
     Provider.CLOUDFILES: (
         "libcloud.storage.drivers.cloudfiles",
         "CloudFilesStorageDriver",

@@ -16,6 +16,7 @@
 import os.path
 import random
 import hashlib
+import io
 
 from libcloud.utils.py3 import PY3
 from libcloud.utils.py3 import b
@@ -31,6 +32,12 @@ from libcloud.storage.types import ContainerDoesNotExistError
 from libcloud.storage.types import ContainerIsNotEmptyError
 from libcloud.storage.types import ObjectDoesNotExistError
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 class GoogleDriveFileObject(file):
     def __init__(self, yield_count=5, chunk_len=10):
@@ -83,360 +90,93 @@ class GoogleDriveIterator(object):
 class GoogleDriveStorageDriver(StorageDriver):
     """
     Google Drive Storage driver.
-
-    >>> from libcloud.storage.drivers.dummy import DummyStorageDriver
-    >>> driver = DummyStorageDriver('key', 'secret')
-    >>> container = driver.create_container(container_name='test container')
-    >>> container
-    <Container: name=test container, provider=Dummy Storage Provider>
-    >>> container.name
-    'test container'
-    >>> container.extra['object_count']
-    0
     """
-
-    name = "Ipfs Storage Provider"
-    website = "https://ipfs.tech/"
+    name = "Google Drive Storage Provider"
+    website = "https://drive.google.com/"
 
     #def __init__(self):
     #    self._containers = {}
 
-    def get_meta_data(self):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> driver.get_meta_data()['object_count']
-        0
-        >>> driver.get_meta_data()['container_count']
-        0
-        >>> driver.get_meta_data()['bytes_used']
-        0
-        >>> container_name = 'test container 1'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container_name = 'test container 2'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> obj = container.upload_object_via_stream(
-        ...  object_name='test object', iterator=DummyFileObject(5, 10),
-        ...  extra={})
-        >>> driver.get_meta_data()['object_count']
-        1
-        >>> driver.get_meta_data()['container_count']
-        2
-        >>> driver.get_meta_data()['bytes_used']
-        50
-
-        :rtype: ``dict``
-        """
-
-        container_count = len(self._containers)
-        object_count = sum(
-            [
-                len(self._containers[container]["objects"])
-                for container in self._containers
-            ]
-        )
-
-        bytes_used = 0
-        for container in self._containers:
-            objects = self._containers[container]["objects"]
-            for _, obj in objects.items():
-                bytes_used += obj.size
-
-        return {
-            "container_count": int(container_count),
-            "object_count": int(object_count),
-            "bytes_used": int(bytes_used),
-        }
-
-    def iterate_containers(self):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> list(driver.iterate_containers())
-        []
-        >>> container_name = 'test container 1'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container
-        <Container: name=test container 1, provider=Dummy Storage Provider>
-        >>> container.name
-        'test container 1'
-        >>> container_name = 'test container 2'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container
-        <Container: name=test container 2, provider=Dummy Storage Provider>
-        >>> container = driver.create_container(
-        ...  container_name='test container 2')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ContainerAlreadyExistsError:
-        >>> container_list=list(driver.iterate_containers())
-        >>> sorted([c.name for c in container_list])
-        ['test container 1', 'test container 2']
-
-        @inherits: :class:`StorageDriver.iterate_containers`
-        """
-
-        for container in list(self._containers.values()):
-            yield container["container"]
-
-    def iterate_container_objects(self, container, prefix=None, ex_prefix=None):
-        prefix = self._normalize_prefix_argument(prefix, ex_prefix)
-
-        container = self.get_container(container.name)
-        objects = self._containers[container.name]["objects"].values()
-        return self._filter_listed_container_objects(objects, prefix)
-
-    def get_container(container_name=None):
-        if container_name is None:
-            return ipfshttpclient.connect()
-        return ipfshttpclient.connect(container_name)
-
-    def get_container_cdn_url(self, container):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> driver.get_container('unknown') #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ContainerDoesNotExistError:
-        >>> container_name = 'test container 1'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container
-        <Container: name=test container 1, provider=Dummy Storage Provider>
-        >>> container.name
-        'test container 1'
-        >>> container.get_cdn_url()
-        'http://www.test.com/container/test_container_1'
-
-        @inherits: :class:`StorageDriver.get_container_cdn_url`
-        """
-
-        if container.name not in self._containers:
-            raise ContainerDoesNotExistError(
-                driver=self, value=None, container_name=container.name
-            )
-
-        return self._containers[container.name]["cdn_url"]
+    def get_container(credentials=None):
+        SCOPES = ['https://www.googleapis.com/auth/drive']
+        creds = None
+        if os.path.exists('token.json'):
+            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(credentials, SCOPES)
+                creds = flow.run_local_server(port=0)
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+        try:
+            return build('drive', 'v3', credentials=creds)
+        except HttpError as error:
+            print(f'An error occurred: {error}')
 
     def get_object(container, object_name):
-        container.get(object_name)
-        return container.cat(object_name)
+        file_id = ''
+        query =  f"name='{object_name}'"
 
-    def get_object_cdn_url(self, obj):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container_name = 'test container 1'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container
-        <Container: name=test container 1, provider=Dummy Storage Provider>
-        >>> obj = container.upload_object_via_stream(
-        ...      object_name='test object 5',
-        ...      iterator=DummyFileObject(5, 10), extra={})
-        >>> obj.name
-        'test object 5'
-        >>> obj.get_cdn_url()
-        'http://www.test.com/object/test_object_5'
+        results = container.files().list(q=query,fields="nextPageToken, files(id, name)").execute()
+        items = results.get("files", [])
 
-        @inherits: :class:`StorageDriver.get_object_cdn_url`
-        """
-
-        container_name = obj.container.name
-        container_objects = self._containers[container_name]["objects"]
-        if obj.name not in container_objects:
-            raise ObjectDoesNotExistError(object_name=obj.name, value=None, driver=self)
-
-        return container_objects[obj.name].meta_data["cdn_url"]
-
-    def create_container(self, container_name):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container_name = 'test container 1'
-        >>> container = driver.create_container(container_name=container_name)
-        >>> container
-        <Container: name=test container 1, provider=Dummy Storage Provider>
-        >>> container = driver.create_container(
-        ...    container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ContainerAlreadyExistsError:
-
-        @inherits: :class:`StorageDriver.create_container`
-        """
-
-        if container_name in self._containers:
-            raise ContainerAlreadyExistsError(
-                container_name=container_name, value=None, driver=self
+        for item in items:
+            if item['name'] == object_name:
+                print(item['id'])
+                file_id = item['id']
+        
+        if file_id == '':
+            raise ObjectDoesNotExistError(
+                driver=container, value=object_name, object_name=object_name
             )
-
-        extra = {"object_count": 0}
-        container = Container(name=container_name, extra=extra, driver=self)
-
-        self._containers[container_name] = {
-            "container": container,
-            "objects": {},
-            "cdn_url": "http://www.test.com/container/%s"
-            % (container_name.replace(" ", "_")),
-        }
-        return container
-
-    def delete_container(self, container):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container = Container(name = 'test container',
-        ...    extra={'object_count': 0}, driver=driver)
-        >>> driver.delete_container(container=container)
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ContainerDoesNotExistError:
-        >>> container = driver.create_container(
-        ...      container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        >>> len(driver._containers)
-        1
-        >>> driver.delete_container(container=container)
-        True
-        >>> len(driver._containers)
-        0
-        >>> container = driver.create_container(
-        ...    container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        >>> obj = container.upload_object_via_stream(
-        ...   object_name='test object', iterator=DummyFileObject(5, 10),
-        ...   extra={})
-        >>> driver.delete_container(container=container)
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ContainerIsNotEmptyError:
-
-        @inherits: :class:`StorageDriver.delete_container`
-        """
-
-        container_name = container.name
-        if container_name not in self._containers:
-            raise ContainerDoesNotExistError(
-                container_name=container_name, value=None, driver=self
-            )
-
-        container = self._containers[container_name]
-        if len(container["objects"]) > 0:
-            raise ContainerIsNotEmptyError(
-                container_name=container_name, value=None, driver=self
-            )
-
-        del self._containers[container_name]
-        return True
+                
+        return {'id': file_id, 'name': object_name, 'container': container}
 
     def download_object(
-        self, obj, destination_path, overwrite_existing=False, delete_on_failure=True
+        obj, destination_path, overwrite_existing=False, delete_on_failure=True
     ):
-        kwargs_dict = {
-            "obj": obj,
-            "response": DummyFileObject(),
-            "destination_path": destination_path,
-            "overwrite_existing": overwrite_existing,
-            "delete_on_failure": delete_on_failure,
-        }
+        request = obj['container'].files().get_media(fileId=obj['id'])
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
 
-        return self._save_object(**kwargs_dict)
+        while done is False:
+            status, done = downloader.next_chunk()
+            print(F'Download {int(status.progress() * 100)}.')
 
-    def download_object_as_stream(self, obj, chunk_size=None):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container = driver.create_container(
-        ...   container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        >>> obj = container.upload_object_via_stream(object_name='test object',
-        ...    iterator=DummyFileObject(5, 10), extra={})
-        >>> stream = container.download_object_as_stream(obj)
-        >>> stream #doctest: +ELLIPSIS
-        <...closed...>
-
-        @inherits: :class:`StorageDriver.download_object_as_stream`
-        """
-
-        return DummyFileObject()
+        with open(f"{destination_path}/{obj['name']}", "wb") as f:
+            fh.seek(0)
+            f.write(fh.read())
 
     def upload_object(
         #self,
         file_path,
         container,
+        extra,
         object_name=None,
-        extra=None,
         verify_hash=True,
         headers=None,
     ):
-        return container.add(file_path)['Hash']
+        file = open(file_path, 'rb')
 
-    def upload_object_via_stream(
-        self, iterator, container, object_name, extra=None, headers=None
+        if(object_name is None):
+            object_name = file_path.split("/")[-1]
+
+        media = MediaFileUpload(object_name, mimetype=extra['content_type'])
+
+        file_metadata = {'name': object_name, 'parents':None}
+        file = container.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(F'Uploaded Succesfully! File ID: {file.get("id")}')
+
+    def delete_object(
+        #self, 
+        obj
     ):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container = driver.create_container(
-        ...    container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        >>> obj = container.upload_object_via_stream(
-        ...   object_name='test object', iterator=DummyFileObject(5, 10),
-        ...   extra={})
-        >>> obj #doctest: +ELLIPSIS
-        <Object: name=test object, size=50, ...>
-
-        @inherits: :class:`StorageDriver.upload_object_via_stream`
-        """
-
-        size = len(iterator)
-        return self._add_object(
-            container=container, object_name=object_name, size=size, extra=extra
-        )
-
-    def delete_object(self, obj):
-        """
-        >>> driver = DummyStorageDriver('key', 'secret')
-        >>> container = driver.create_container(
-        ...   container_name='test container 1')
-        ... #doctest: +IGNORE_EXCEPTION_DETAIL
-        >>> obj = container.upload_object_via_stream(object_name='test object',
-        ...   iterator=DummyFileObject(5, 10), extra={})
-        >>> obj #doctest: +ELLIPSIS
-        <Object: name=test object, size=50, ...>
-        >>> container.delete_object(obj=obj)
-        True
-        >>> obj = Object(name='test object 2',
-        ...    size=1000, hash=None, extra=None,
-        ...    meta_data=None, container=container,driver=None)
-        >>> container.delete_object(obj=obj) #doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ObjectDoesNotExistError:
-
-        @inherits: :class:`StorageDriver.delete_object`
-        """
-
-        container_name = obj.container.name
-        object_name = obj.name
-        obj = self.get_object(container_name=container_name, object_name=object_name)
-
-        del self._containers[container_name]["objects"][object_name]
-        return True
-
-    def _add_object(self, container, object_name, size, extra=None):
-        container = self.get_container(container.name)
-
-        extra = extra or {}
-        meta_data = extra.get("meta_data", {})
-        meta_data.update(
-            {
-                "cdn_url": "http://www.test.com/object/%s"
-                % (object_name.replace(" ", "_"))
-            }
-        )
-        obj = Object(
-            name=object_name,
-            size=size,
-            extra=extra,
-            hash=None,
-            meta_data=meta_data,
-            container=container,
-            driver=self,
-        )
-
-        self._containers[container.name]["objects"][object_name] = obj
-        return obj
+        file_id = obj['id']
+        obj['container'].files().delete(fileId=file_id).execute()
+        print(f'File with ID: {file_id} was deleted successfully')
 
 
 if __name__ == "__main__":
