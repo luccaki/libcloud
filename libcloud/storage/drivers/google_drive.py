@@ -37,7 +37,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload, MediaIoBaseUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from google.oauth2.service_account import Credentials as ServiceAccountCredentials
+
 
 class GoogleDriveFileObject(file):
     def __init__(self, yield_count=5, chunk_len=10):
@@ -99,19 +101,9 @@ class GoogleDriveStorageDriver(StorageDriver):
 
     def get_container(credentials=None):
         SCOPES = ['https://www.googleapis.com/auth/drive']
-        creds = None
-        if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(credentials, SCOPES)
-                creds = flow.run_local_server(port=0)
-            with open('token.json', 'w') as token:
-                token.write(creds.to_json())
+        credentials = ServiceAccountCredentials.from_service_account_info(credentials)
         try:
-            return build('drive', 'v3', credentials=creds)
+            return build('drive', 'v3', credentials=credentials)
         except HttpError as error:
             print(f'An error occurred: {error}')
 
@@ -155,11 +147,9 @@ class GoogleDriveStorageDriver(StorageDriver):
         fh = io.BytesIO()
         downloader = MediaIoBaseDownload(fh, request)
         done = False
-
         while done is False:
             status, done = downloader.next_chunk()
             print(F'Download {int(status.progress() * 100)}.')
-
         return fh
 
     def upload_object(
