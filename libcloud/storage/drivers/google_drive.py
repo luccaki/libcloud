@@ -37,7 +37,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload, MediaIoBaseUpload
 
 class GoogleDriveFileObject(file):
     def __init__(self, yield_count=5, chunk_len=10):
@@ -150,6 +150,18 @@ class GoogleDriveStorageDriver(StorageDriver):
             fh.seek(0)
             f.write(fh.read())
 
+    def download_object_as_stream(obj, chunk_size=None):
+        request = obj['container'].files().get_media(fileId=obj['id'])
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+
+        while done is False:
+            status, done = downloader.next_chunk()
+            print(F'Download {int(status.progress() * 100)}.')
+
+        return fh
+
     def upload_object(
         #self,
         file_path,
@@ -169,6 +181,22 @@ class GoogleDriveStorageDriver(StorageDriver):
         file_metadata = {'name': object_name, 'parents':None}
         file = container.files().create(body=file_metadata, media_body=media, fields='id').execute()
         print(F'Uploaded Succesfully! File ID: {file.get("id")}')
+
+    def upload_object_via_stream(
+        iterator,
+        container,
+        object_name,
+        extra=None,
+        headers=None,
+        ex_storage_class=None,
+    ):
+        media = MediaIoBaseUpload(fd=iterator, mimetype="application/octet-stream", resumable=True)
+
+        file_metadata = {'name': object_name, 'parents':None}
+        file = container.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        print(F'Uploaded Succesfully! File ID: {file.get("id")}')
+
+        
 
     def delete_object(
         #self, 
