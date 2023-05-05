@@ -150,6 +150,7 @@ class GoogleDriveStorageDriver(StorageDriver):
         while done is False:
             status, done = downloader.next_chunk()
             print(F'Download {int(status.progress() * 100)}.')
+        fh.seek(0)
         return fh
 
     def upload_object(
